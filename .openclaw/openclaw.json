@@ -1,0 +1,181 @@
+{
+  "meta": {
+    "lastTouchedVersion": "2026.3.24",
+    "lastTouchedAt": "2026-03-30T15:36:02.754Z"
+  },
+  "wizard": {
+    "lastRunAt": "2026-03-28T07:05:01.979Z",
+    "lastRunVersion": "2026.3.24",
+    "lastRunCommand": "onboard",
+    "lastRunMode": "local"
+  },
+  "models": {
+    "mode": "merge",
+    "providers": {
+      "custom-api-fireworks-ai": {
+        "baseUrl": "https://api.fireworks.ai/inference/v1",
+        "apiKey": "fw_8ViBdVTLm9XHVpyqMPzZJg",
+        "api": "openai-completions",
+        "models": [
+          {
+            "id": "accounts/fireworks/models/deepseek-v3p2",
+            "name": "accounts/fireworks/models/deepseek-v3p2 (Custom Provider)",
+            "reasoning": false,
+            "input": [
+              "text"
+            ],
+            "cost": {
+              "input": 0,
+              "output": 0,
+              "cacheRead": 0,
+              "cacheWrite": 0
+            },
+            "contextWindow": 16000,
+            "maxTokens": 4096
+          }
+        ]
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+      "model": {
+        "primary": "custom-api-fireworks-ai/accounts/fireworks/models/deepseek-v3p2"
+      },
+      "models": {
+        "custom-api-fireworks-ai/accounts/fireworks/models/deepseek-v3p2": {}
+      },
+      "workspace": "/home/node/.openclaw/workspace"
+    },
+    "list": [
+      {
+        "id": "main",
+        "model": "custom-api-fireworks-ai/accounts/fireworks/models/deepseek-v3p2"
+      },
+      {
+        "id": "ops-chief",
+        "name": "ops-chief",
+        "workspace": "/home/node/.openclaw/workspace/ops-chief",
+        "agentDir": "/home/node/.openclaw/agents/ops-chief/agent",
+        "identity": {
+          "name": "运营总负责人",
+          "emoji": "🧭"
+        },
+        "subagents": {
+          "allowAgents": [
+            "x-traffic"
+          ]
+        }
+      },
+      {
+        "id": "x-traffic",
+        "name": "x-traffic",
+        "workspace": "/home/node/.openclaw/workspace/x-traffic",
+        "agentDir": "/home/node/.openclaw/agents/x-traffic/agent",
+        "identity": {
+          "name": "X平台流量运营",
+          "emoji": "📈"
+        }
+      }
+    ]
+  },
+  "tools": {
+    "profile": "coding"
+  },
+  "bindings": [
+    {
+      "type": "route",
+      "agentId": "ops-chief",
+      "match": {
+        "channel": "telegram",
+        "accountId": "ops"
+      }
+    },
+    {
+      "type": "route",
+      "agentId": "x-traffic",
+      "match": {
+        "channel": "telegram",
+        "accountId": "xtraffic"
+      }
+    }
+  ],
+  "messages": {
+    "ackReaction": "👀",
+    "ackReactionScope": "all",
+    "statusReactions": {
+      "enabled": true
+    }
+  },
+  "commands": {
+    "native": "auto",
+    "nativeSkills": "auto",
+    "restart": true,
+    "ownerDisplay": "raw"
+  },
+  "session": {
+    "dmScope": "per-channel-peer"
+  },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "dmPolicy": "pairing",
+      "groups": {
+        "*": {
+          "requireMention": true
+        }
+      },
+      "groupPolicy": "allowlist",
+      "streaming": "partial",
+      "accounts": {
+        "default": {
+          "dmPolicy": "open",
+          "botToken": "8337134410:AAGvUE1fSFG35nuYZiKIxr20ehbQ4els88s",
+          "allowFrom": [
+            "*"
+          ],
+          "groupPolicy": "allowlist",
+          "streaming": "partial"
+        },
+        "ops": {
+          "enabled": true,
+          "dmPolicy": "pairing",
+          "botToken": "8635682292:AAF0Z53YoYVI0PEt-h7h38RFsa5t_hLeD_Y",
+          "groups": {
+            "*": {
+              "requireMention": false
+            }
+          },
+          "groupPolicy": "open",
+          "streaming": "block"
+        },
+        "xtraffic": {
+          "enabled": true,
+          "dmPolicy": "pairing",
+          "botToken": "8752397470:AAECrA5aScYtq9lmQ08PrJHOeMMA_qNKfrA",
+          "groupPolicy": "allowlist",
+          "streaming": "partial"
+        }
+      }
+    }
+  },
+  "gateway": {
+    "port": 18789,
+    "mode": "local",
+    "bind": "lan",
+    "controlUi": {
+      "allowedOrigins": [
+        "http://localhost:18789",
+        "http://127.0.0.1:18789"
+      ]
+    },
+    "auth": {
+      "mode": "token",
+      "token": "3ef67ab0ffb2feee800556710f56dfa9cfc58380709f4b4180deefb9b2ed690a"
+    },
+    "tailscale": {
+      "mode": "off",
+      "resetOnExit": false
+    }
+  }
+}
