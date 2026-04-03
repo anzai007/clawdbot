@@ -37,6 +37,42 @@ cd skills/tweetapi && TWEETAPI_KEY="sk_xxx" python3 scripts/tweetapi.py request 
 {"data":{"id":"推文ID","action":"create_tweet","success":true,"metadata":{"tweet_id":"xxx","author_username":"xxx","text":"xxx","url":"https://twitter.com/xxx/status/xxx"}}}
 ```
 
+### 关注接口
+- 端点：`POST /tw-v2/interaction/follow`
+- 重要差异：文档显示使用`username`参数，实际需要`userId`参数（需先通过`/tw-v2/users/show`查询）
+- 正确参数结构：
+```bash
+# 1. 先获取用户ID
+cd skills/tweetapi && TWEETAPI_KEY="sk_xxx" python3 scripts/tweetapi.py request GET /tw-v2/users/show --json '{"authToken": "xxx", "username": "目标用户名", "proxy": "host:port@user:pass"}'
+# 返回中包含 id_str 字段
+
+# 2. 使用userId关注
+cd skills/tweetapi && TWEETAPI_KEY="sk_xxx" python3 scripts/tweetapi.py request POST /tw-v2/interaction/follow --json '{"authToken": "xxx", "proxy": "host:port@user:pass", "body": {"userId": "查询到的用户ID"}}'
+```
+- 成功返回：
+```json
+{"success":true,"message":"关注成功"}
+```
+
+### 媒体上传与发帖接口
+- 文档：https://www.tweetapi.com/docs/community/create-community-post-with-media
+- 发送带媒体（图片/视频）的推文
+- **两步流程**：
+  1. **上传媒体**：`POST /tw-v2/media/upload` 上传文件，获取media_id
+  2. **创建带媒体帖子**：`POST /tw-v2/community/create-post-with-media` 使用media_id
+- **参数结构**：
+```bash
+# 1. 上传媒体（以图片为例）
+cd skills/tweetapi && TWEETAPI_KEY="sk_xxx" python3 scripts/tweetapi.py request POST /tw-v2/media/upload --json '{"authToken": "xxx", "proxy": "host:port@user:pass", "body": {"media": "图片base64编码", "media_type": "image/jpeg"}}'
+
+# 2. 创建带媒体帖子
+cd skills/tweetapi && TWEETAPI_KEY="sk_xxx" python3 scripts/tweetapi.py request POST /tw-v2/community/create-post-with-media --json '{"authToken": "xxx", "proxy": "host:port@user:pass", "body": {"text": "推文内容", "media_ids": ["上传返回的media_id"]}}'
+```
+- **注意事项**：
+  - 视频文件可能需要特殊处理（格式、大小限制）
+  - 社区帖子接口可能也适用于普通时间线推文
+  - base64编码需要包含完整图片数据
+
 ## 维护规则
 
 - 新增接口能力时在此补充"示例命令 + 失败案例 + 成功返回"。
