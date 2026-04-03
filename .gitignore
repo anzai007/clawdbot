@@ -24,6 +24,10 @@ __openclaw_vitest__/
 !.openclaw/workspace/x-traffic/AGENTS.md
 !.openclaw/workspace/x-traffic/SOUL.md
 !.openclaw/workspace/x-traffic/TOOLS.md
+!.openclaw/workspace/meta-ads/
+!.openclaw/workspace/meta-ads/AGENTS.md
+!.openclaw/workspace/meta-ads/SOUL.md
+!.openclaw/workspace/meta-ads/TOOLS.md
 !.openclaw/workspace/skills/
 !.openclaw/workspace/skills/tweetapi/
 !.openclaw/workspace/skills/tweetapi/SKILL.md

@@ -1,7 +1,7 @@
 {
   "meta": {
-    "lastTouchedVersion": "2026.3.24",
-    "lastTouchedAt": "2026-03-30T15:36:02.754Z"
+    "lastTouchedVersion": "2026.3.28",
+    "lastTouchedAt": "2026-03-31T02:38:42.812Z"
   },
   "wizard": {
     "lastRunAt": "2026-03-28T07:05:01.979Z",
@@ -76,6 +76,18 @@
           "name": "X平台流量运营",
           "emoji": "📈"
         }
+      },
+      {
+        "id": "meta-ads",
+        "name": "meta-ads",
+        "workspace": "/home/node/.openclaw/workspace/meta-ads",
+        "agentDir": "/home/node/.openclaw/agents/meta-ads/agent",
+        "model": "custom-api-fireworks-ai/accounts/fireworks/models/deepseek-v3p2",
+        "identity": {
+          "name": "Meta广告投放负责人",
+          "theme": "performance marketing specialist",
+          "emoji": "📣"
+        }
       }
     ]
   },
@@ -97,6 +109,14 @@
       "match": {
         "channel": "telegram",
         "accountId": "xtraffic"
+      }
+    },
+    {
+      "type": "route",
+      "agentId": "meta-ads",
+      "match": {
+        "channel": "telegram",
+        "accountId": "metaads"
       }
     }
   ],
@@ -155,6 +175,14 @@
           "botToken": "8752397470:AAECrA5aScYtq9lmQ08PrJHOeMMA_qNKfrA",
           "groupPolicy": "allowlist",
           "streaming": "partial"
+        },
+        "metaads": {
+          "name": "Meta Ads Bot",
+          "enabled": true,
+          "dmPolicy": "pairing",
+          "botToken": "8784180249:AAF-tOYqQN41j1PMsKWlKELeD5AQ_qppSww",
+          "groupPolicy": "allowlist",
+          "streaming": "partial"
         }
       }
     }
@@ -176,6 +204,13 @@
     "tailscale": {
       "mode": "off",
       "resetOnExit": false
+    }
+  },
+  "skills": {
+    "entries": {
+      "meta-ads": {
+        "enabled": true
+      }
     }
   }
 }
