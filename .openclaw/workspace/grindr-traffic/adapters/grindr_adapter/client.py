@@ -43,29 +43,76 @@ class GrindrClient:
         self.logger = logger
         self.session = requests.Session()
 
-    def _headers(self) -> dict[str, str]:
+    def _headers(self, *, use_auth: bool, auth_token: str | None) -> dict[str, str]:
         """统一组装请求头。"""
 
-        # 核心鉴权头按 Grindr3 规范发送；同时保留 X-Device-Id 兼容旧网关策略。
-        return {
-            "Authorization": f"{self.settings.grindr_auth_scheme} {self.settings.grindr_auth_token}",
+        headers: dict[str, str] = {
+            "User-Agent": self.settings.grindr_user_agent,
+            "X-Device-Id": self.settings.grindr_device_id,
             "L-Device-Info": self.settings.grindr_device_info,
             "L-Locale": self.settings.grindr_locale,
             "L-Time-Zone": self.settings.grindr_time_zone,
-            "User-Agent": self.settings.grindr_user_agent,
-            "X-Device-Id": self.settings.grindr_device_id,
             "Accept": "application/json",
         }
 
-    def get(self, endpoint: str, *, action: str) -> dict[str, Any]:
+        if use_auth:
+            token = (auth_token or self.settings.grindr_auth_token).strip()
+            if token:
+                headers["Authorization"] = f"{self.settings.grindr_auth_scheme} {token}"
+
+        return headers
+
+    def get(self, endpoint: str, *, action: str, use_auth: bool = True, auth_token: str | None = None) -> dict[str, Any]:
         """执行 GET 请求。"""
 
-        return self._request("GET", endpoint, action=action, payload=None)
+        return self._request(
+            "GET",
+            endpoint,
+            action=action,
+            payload=None,
+            use_auth=use_auth,
+            auth_token=auth_token,
+        )
 
-    def put(self, endpoint: str, *, action: str, payload: dict[str, Any]) -> dict[str, Any]:
+    def put(
+        self,
+        endpoint: str,
+        *,
+        action: str,
+        payload: dict[str, Any],
+        use_auth: bool = True,
+        auth_token: str | None = None,
+    ) -> dict[str, Any]:
         """执行 PUT 请求。"""
 
-        return self._request("PUT", endpoint, action=action, payload=payload)
+        return self._request(
+            "PUT",
+            endpoint,
+            action=action,
+            payload=payload,
+            use_auth=use_auth,
+            auth_token=auth_token,
+        )
+
+    def post(
+        self,
+        endpoint: str,
+        *,
+        action: str,
+        payload: dict[str, Any],
+        use_auth: bool = True,
+        auth_token: str | None = None,
+    ) -> dict[str, Any]:
+        """执行 POST 请求。"""
+
+        return self._request(
+            "POST",
+            endpoint,
+            action=action,
+            payload=payload,
+            use_auth=use_auth,
+            auth_token=auth_token,
+        )
 
     def _request(
         self,
@@ -74,6 +121,8 @@ class GrindrClient:
         *,
         action: str,
         payload: dict[str, Any] | None,
+        use_auth: bool,
+        auth_token: str | None,
     ) -> dict[str, Any]:
         """统一请求处理。
 
@@ -92,7 +141,7 @@ class GrindrClient:
                 resp = self.session.request(
                     method=method,
                     url=url,
-                    headers=self._headers(),
+                    headers=self._headers(use_auth=use_auth, auth_token=auth_token),
                     json=payload,
                     timeout=self.settings.grindr_timeout_seconds,
                 )
@@ -118,7 +167,6 @@ class GrindrClient:
                 if 500 <= resp.status_code < 600 and attempt < max_attempts:
                     continue
 
-                # 4xx 或最终 5xx：直接失败
                 error_code = f"HTTP_{resp.status_code}"
                 message = _safe_error_message(resp)
                 log_action_event(
@@ -161,7 +209,6 @@ class GrindrClient:
                     retry_count=retry_count,
                 ) from exc
 
-        # 理论上不会走到这里，防御性兜底
         raise UpstreamRequestError(
             code="UNKNOWN_UPSTREAM_ERROR",
             message=str(last_error) if last_error else "未知上游错误",

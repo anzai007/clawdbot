@@ -17,11 +17,11 @@ class Settings:
 
     grindr_base_url: str
     grindr_auth_token: str
+    grindr_auth_scheme: str
     grindr_device_id: str
     grindr_device_info: str
     grindr_locale: str
     grindr_time_zone: str
-    grindr_auth_scheme: str
     grindr_user_agent: str
     grindr_timeout_seconds: int
     grindr_retry_times: int
@@ -66,6 +66,15 @@ def _require_value(values: dict[str, str], key: str) -> str:
     return value
 
 
+def _optional_value(values: dict[str, str], key: str, default: str = "") -> str:
+    """读取可选配置。"""
+
+    value = values.get(key, default).strip()
+    if value == "replace_me":
+        return default
+    return value
+
+
 def _parse_positive_int(values: dict[str, str], key: str, default: int) -> int:
     """解析正整数配置并校验。"""
 
@@ -77,6 +86,15 @@ def _parse_positive_int(values: dict[str, str], key: str, default: int) -> int:
     if number <= 0:
         raise ConfigError(f"配置 {key} 必须大于 0，当前值：{raw}")
     return number
+
+
+def _resolve_path(raw_value: str, *, base: Path) -> Path:
+    """把相对路径解析为绝对路径。"""
+
+    path = Path(raw_value)
+    if path.is_absolute():
+        return path
+    return (base / raw_value).resolve()
 
 
 def load_settings() -> Settings:
@@ -92,41 +110,44 @@ def load_settings() -> Settings:
     file_values = _parse_env_file(env_path)
 
     merged: dict[str, str] = dict(file_values)
-    for key in file_values:
-        if key in os.environ and os.environ[key].strip():
-            merged[key] = os.environ[key].strip()
+    for key, value in os.environ.items():
+        if key.startswith("GRINDR_") and value.strip():
+            merged[key] = value.strip()
 
     base_url = _require_value(merged, "GRINDR_BASE_URL").rstrip("/")
-    auth_token = _require_value(merged, "GRINDR_AUTH_TOKEN")
     device_id = _require_value(merged, "GRINDR_DEVICE_ID")
-    # 兼容两种写法：
-    # 1) 显式设置 GRINDR_DEVICE_INFO（推荐，直接填 L-Device-Info 完整值）
-    # 2) 未设置时回退到 GRINDR_DEVICE_ID，避免旧配置直接失效
-    device_info = merged.get("GRINDR_DEVICE_INFO", "").strip() or device_id
-    locale = merged.get("GRINDR_LOCALE", "zh_CN").strip() or "zh_CN"
-    time_zone = merged.get("GRINDR_TIME_ZONE", "America/New_York").strip() or "America/New_York"
-    auth_scheme = merged.get("GRINDR_AUTH_SCHEME", "Grindr3").strip() or "Grindr3"
     user_agent = _require_value(merged, "GRINDR_USER_AGENT")
+    auth_scheme = _optional_value(merged, "GRINDR_AUTH_SCHEME", default="Bearer") or "Bearer"
+    auth_token = _optional_value(merged, "GRINDR_AUTH_TOKEN", default="")
+    # L-* 头兼容：未显式配置时回退到 device_id / 常用默认值。
+    device_info = _optional_value(merged, "GRINDR_DEVICE_INFO", default=device_id) or device_id
+    locale = _optional_value(merged, "GRINDR_LOCALE", default="zh_CN") or "zh_CN"
+    time_zone = _optional_value(merged, "GRINDR_TIME_ZONE", default="America/New_York") or "America/New_York"
+
     timeout_seconds = _parse_positive_int(merged, "GRINDR_TIMEOUT_SECONDS", default=20)
     retry_times = _parse_positive_int(merged, "GRINDR_RETRY_TIMES", default=2)
 
-    log_dir = merged.get("GRINDR_LOG_DIR", "./logs").strip() or "./logs"
-    log_dir_path = (env_path.parent / log_dir).resolve() if not Path(log_dir).is_absolute() else Path(log_dir)
-    session_file = merged.get("GRINDR_SESSION_FILE", "./.secrets/grindr.session.json").strip() or "./.secrets/grindr.session.json"
-    session_file_path = (
-        (_workspace_root() / session_file).resolve()
-        if not Path(session_file).is_absolute()
-        else Path(session_file)
+    log_dir_raw = _optional_value(merged, "GRINDR_LOG_DIR", default="./logs") or "./logs"
+    session_file_raw = _optional_value(
+        merged,
+        "GRINDR_SESSION_FILE",
+        default="./.secrets/grindr.session.json",
     )
+    if not session_file_raw:
+        raise ConfigError("缺少必要配置：GRINDR_SESSION_FILE（请在 .secrets/grindr.env 中设置）")
+
+    workspace = _workspace_root()
+    log_dir_path = _resolve_path(log_dir_raw, base=workspace)
+    session_file_path = _resolve_path(session_file_raw, base=workspace)
 
     return Settings(
         grindr_base_url=base_url,
         grindr_auth_token=auth_token,
+        grindr_auth_scheme=auth_scheme,
         grindr_device_id=device_id,
         grindr_device_info=device_info,
         grindr_locale=locale,
         grindr_time_zone=time_zone,
-        grindr_auth_scheme=auth_scheme,
         grindr_user_agent=user_agent,
         grindr_timeout_seconds=timeout_seconds,
         grindr_retry_times=retry_times,

@@ -9,6 +9,16 @@ ADAPTER_DIR="${WORKSPACE_DIR}/adapters/grindr_adapter"
 ENV_FILE="${WORKSPACE_DIR}/.secrets/grindr.env"
 REQ_FILE="${ADAPTER_DIR}/requirements.txt"
 
+if [[ ! -d "${ADAPTER_DIR}" ]]; then
+  echo "[ERROR] adapter 目录不存在：${ADAPTER_DIR}"
+  exit 1
+fi
+
+if [[ ! -f "${REQ_FILE}" ]]; then
+  echo "[ERROR] requirements 文件不存在：${REQ_FILE}"
+  exit 1
+fi
+
 if ! command -v python3 >/dev/null 2>&1; then
   echo "[ERROR] 未找到 python3，请先安装 Python 3。"
   exit 1
@@ -53,4 +63,5 @@ if [[ ! -f "${SESSION_FILE_PATH}" ]]; then
 fi
 
 cd "${ADAPTER_DIR}"
+echo "[INFO] 启动 grindr_adapter: http://${HOST}:${PORT}"
 ADAPTER_HOST="${HOST}" ADAPTER_PORT="${PORT}" python3 app.py
