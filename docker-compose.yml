@@ -7,11 +7,12 @@ services:
       TZ: ${OPENCLAW_TZ:-UTC}
       GRINDR_ENV_FILE: /workspace/.secrets/grindr.env
       ADAPTER_HOST: 0.0.0.0
-      ADAPTER_PORT: 18081
+      ADAPTER_PORT: 8787
+    working_dir: /workspace/adapters/grindr_adapter
     volumes:
       - ./.openclaw/workspace/grindr-traffic:/workspace
     ports:
-      - "${GRINDR_ADAPTER_PORT:-18081}:18081"
+      - "${GRINDR_ADAPTER_PORT:-8787}:8787"
     init: true
     restart: unless-stopped
     command: ["python", "app.py"]
@@ -21,7 +22,7 @@ services:
           "CMD",
           "python",
           "-c",
-          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:18081/health', timeout=3)",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8787/health', timeout=3)",
         ]
       interval: 30s
       timeout: 5s

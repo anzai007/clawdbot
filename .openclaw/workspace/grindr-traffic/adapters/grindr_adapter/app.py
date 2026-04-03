@@ -148,7 +148,7 @@ def create_app() -> Flask:
         )
         return jsonify(resp), HTTPStatus.OK
 
-    @app.post("/health")
+    @app.route("/health", methods=["GET", "POST"])
     def health():
         """健康检查路由。"""
 
@@ -204,7 +204,7 @@ def main() -> None:
     """命令行启动入口：python app.py。"""
 
     host = os.getenv("ADAPTER_HOST", "127.0.0.1")
-    port = int(os.getenv("ADAPTER_PORT", "18081"))
+    port = int(os.getenv("ADAPTER_PORT", "8787"))
     app = create_app()
     app.run(host=host, port=port, debug=False)
 

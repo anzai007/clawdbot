@@ -18,6 +18,10 @@ class Settings:
     grindr_base_url: str
     grindr_auth_token: str
     grindr_device_id: str
+    grindr_device_info: str
+    grindr_locale: str
+    grindr_time_zone: str
+    grindr_auth_scheme: str
     grindr_user_agent: str
     grindr_timeout_seconds: int
     grindr_retry_times: int
@@ -94,6 +98,13 @@ def load_settings() -> Settings:
     base_url = _require_value(merged, "GRINDR_BASE_URL").rstrip("/")
     auth_token = _require_value(merged, "GRINDR_AUTH_TOKEN")
     device_id = _require_value(merged, "GRINDR_DEVICE_ID")
+    # 兼容两种写法：
+    # 1) 显式设置 GRINDR_DEVICE_INFO（推荐，直接填 L-Device-Info 完整值）
+    # 2) 未设置时回退到 GRINDR_DEVICE_ID，避免旧配置直接失效
+    device_info = merged.get("GRINDR_DEVICE_INFO", "").strip() or device_id
+    locale = merged.get("GRINDR_LOCALE", "zh_CN").strip() or "zh_CN"
+    time_zone = merged.get("GRINDR_TIME_ZONE", "America/New_York").strip() or "America/New_York"
+    auth_scheme = merged.get("GRINDR_AUTH_SCHEME", "Grindr3").strip() or "Grindr3"
     user_agent = _require_value(merged, "GRINDR_USER_AGENT")
     timeout_seconds = _parse_positive_int(merged, "GRINDR_TIMEOUT_SECONDS", default=20)
     retry_times = _parse_positive_int(merged, "GRINDR_RETRY_TIMES", default=2)
@@ -105,6 +116,10 @@ def load_settings() -> Settings:
         grindr_base_url=base_url,
         grindr_auth_token=auth_token,
         grindr_device_id=device_id,
+        grindr_device_info=device_info,
+        grindr_locale=locale,
+        grindr_time_zone=time_zone,
+        grindr_auth_scheme=auth_scheme,
         grindr_user_agent=user_agent,
         grindr_timeout_seconds=timeout_seconds,
         grindr_retry_times=retry_times,
