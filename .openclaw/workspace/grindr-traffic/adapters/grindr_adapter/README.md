@@ -1,34 +1,54 @@
-# grindr_adapter（工程骨架）
+# grindr_adapter（可运行版）
 
 ## 项目简介
-`grindr_adapter` 是 `grindr-profile-manager` Skill 的本地适配器骨架。
-当前版本只提供 FastAPI 路由占位、统一 JSON 返回结构和配置加载，不实现真实上游 HTTP 请求。
+`grindr_adapter` 是 `grindr-profile-manager` 的本地 HTTP 适配层。
+当前实现支持最小可运行能力：
+- Flask 服务
+- 统一响应结构
+- 上游 GET/PUT 封装
+- 超时/连接/5xx 重试
+- 输入校验与 preview 预览
+- 文件日志记录（不落地 secrets）
 
 ## 目录结构
 ```text
 adapters/grindr_adapter/
-├── app.py
-├── client.py
-├── config.py
-├── logger.py
-├── schemas.py
-├── utils.py
-└── requirements.txt
+├── app.py          # Flask 路由与统一错误处理
+├── client.py       # 上游请求封装（headers/timeout/retry）
+├── config.py       # .secrets/grindr.env 配置加载与校验
+├── logger.py       # 文件日志与动作日志
+├── schemas.py      # 输入校验与 preview 摘要
+├── utils.py        # 统一成功/失败响应构造
+├── requirements.txt
+└── README.md
 ```
 
 ## 启动方式
-1. 准备环境变量：
-   - 复制 `.secrets/grindr.env.example` 为 `.secrets/grindr.env`
+1. 在工作区准备环境文件：
+   - `.secrets/grindr.env`
+   - 可参考 `.secrets/grindr.env.example`
 2. 安装依赖：
-   - `pip install -r adapters/grindr_adapter/requirements.txt`
+   ```bash
+   pip install -r adapters/grindr_adapter/requirements.txt
+   ```
 3. 启动服务：
-   - `bash scripts/start_grindr_adapter.sh`
-4. 验证健康检查：
-   - `GET /health`
+   ```bash
+   python adapters/grindr_adapter/app.py
+   ```
+   或：
+   ```bash
+   bash scripts/start_grindr_adapter.sh
+   ```
 
-## 后续待实现点
-- 在 `client.py` 中补齐真实上游请求与重试策略。
-- 增加鉴权中间件与请求签名校验。
-- 增加输入校验与错误码映射。
-- 增加单元测试与集成测试。
-- 对接 Skill 脚本与 Adapter 路由的完整闭环。
+## 已实现路由
+- `POST /profile/me/get` -> 上游 `GET /v4/me/profile`
+- `POST /profile/user/get` -> 上游 `GET /v7/profiles/{profileId}`
+- `POST /profile/me/update` -> 上游 `PUT /v3.1/me/profile`
+- `POST /profile/me/images/update` -> 上游 `PUT /v3/me/profile/images`
+- `POST /profile/me/update/preview` -> 本地预览（不请求上游）
+- `POST /profile/me/images/update/preview` -> 本地预览（不请求上游）
+
+## 注意事项
+- 配置缺失会在启动阶段直接报错并退出。
+- 默认监听 `127.0.0.1:18081`。
+- 为避免敏感信息泄露，日志中不记录 token 与 headers。

@@ -51,6 +51,7 @@ __openclaw_vitest__/
 !.openclaw/workspace/grindr-traffic/adapters/grindr_adapter/utils.py
 !.openclaw/workspace/grindr-traffic/adapters/grindr_adapter/requirements.txt
 !.openclaw/workspace/grindr-traffic/adapters/grindr_adapter/README.md
+!.openclaw/workspace/grindr-traffic/adapters/grindr_adapter/Dockerfile
 !.openclaw/workspace/grindr-traffic/scripts/
 !.openclaw/workspace/grindr-traffic/scripts/start_grindr_adapter.sh
 !.openclaw/workspace/skills/
