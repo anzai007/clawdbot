@@ -46,8 +46,12 @@ class GrindrClient:
     def _headers(self) -> dict[str, str]:
         """统一组装请求头。"""
 
+        # 核心鉴权头按 Grindr3 规范发送；同时保留 X-Device-Id 兼容旧网关策略。
         return {
-            "Authorization": f"Bearer {self.settings.grindr_auth_token}",
+            "Authorization": f"{self.settings.grindr_auth_scheme} {self.settings.grindr_auth_token}",
+            "L-Device-Info": self.settings.grindr_device_info,
+            "L-Locale": self.settings.grindr_locale,
+            "L-Time-Zone": self.settings.grindr_time_zone,
             "User-Agent": self.settings.grindr_user_agent,
             "X-Device-Id": self.settings.grindr_device_id,
             "Accept": "application/json",

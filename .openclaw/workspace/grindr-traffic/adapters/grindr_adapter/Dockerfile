@@ -13,4 +13,4 @@ RUN python -m pip install --no-cache-dir -r /tmp/requirements.txt
 # 拷贝运行代码到镜像内；运行时会由 volume 覆盖为工作区最新代码。
 COPY . /app
 
-EXPOSE 18081
+EXPOSE 8787
