@@ -64,6 +64,11 @@ __openclaw_vitest__/
 !.openclaw/workspace/x-traffic/skills/tweetapi/SKILL.md
 !.openclaw/workspace/x-traffic/skills/tweetapi/scripts/
 !.openclaw/workspace/x-traffic/skills/tweetapi/scripts/tweetapi.py
+!.openclaw/skills/
+!.openclaw/skills/city-geocode/
+!.openclaw/skills/city-geocode/SKILL.md
+!.openclaw/skills/city-geocode/scripts/
+!.openclaw/skills/city-geocode/scripts/get_city_geocode.sh
 .openclaw/**/sessions/**
 .openclaw/**/memory/**
 .openclaw/**/logs/**
