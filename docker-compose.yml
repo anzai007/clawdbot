@@ -1,4 +1,33 @@
 services:
+  grindr-adapter:
+    build:
+      context: ./.openclaw/workspace/grindr-traffic/adapters/grindr_adapter
+      dockerfile: Dockerfile
+    environment:
+      TZ: ${OPENCLAW_TZ:-UTC}
+      GRINDR_ENV_FILE: /workspace/.secrets/grindr.env
+      ADAPTER_HOST: 0.0.0.0
+      ADAPTER_PORT: 18081
+    volumes:
+      - ./.openclaw/workspace/grindr-traffic:/workspace
+    ports:
+      - "${GRINDR_ADAPTER_PORT:-18081}:18081"
+    init: true
+    restart: unless-stopped
+    command: ["python", "app.py"]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:18081/health', timeout=3)",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
   openclaw-gateway:
     image: ${OPENCLAW_IMAGE:-openclaw:local}
     environment:

@@ -1,4 +1,2 @@
-fastapi==0.116.1
-uvicorn[standard]==0.35.0
-pydantic==2.11.7
-python-dotenv==1.0.1
+Flask==3.0.3
+requests==2.32.3

@@ -16,6 +16,6 @@ if [[ -f "${ENV_FILE}" ]]; then
   set +a
 fi
 
-# 启动骨架服务（仅占位路由）
+# 启动 adapter 服务
 cd "${ADAPTER_DIR}"
-python3 -m uvicorn app:app --host "${HOST}" --port "${PORT}"
+ADAPTER_HOST="${HOST}" ADAPTER_PORT="${PORT}" python3 app.py
