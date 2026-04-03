@@ -88,6 +88,17 @@
           "theme": "performance marketing specialist",
           "emoji": "📣"
         }
+      },
+      {
+        "id": "grindr-traffic",
+        "name": "grindr-traffic",
+        "workspace": "/home/node/.openclaw/workspace/grindr-traffic",
+        "agentDir": "/home/node/.openclaw/agents/grindr-traffic/agent",
+        "model": "custom-api-fireworks-ai/accounts/fireworks/models/deepseek-v3p2",
+        "identity": {
+          "name": "Grindr流量运营",
+          "emoji": "🔥"
+        }
       }
     ]
   },
@@ -117,6 +128,14 @@
       "match": {
         "channel": "telegram",
         "accountId": "metaads"
+      }
+    },
+    {
+      "type": "route",
+      "agentId": "grindr-traffic",
+      "match": {
+        "channel": "telegram",
+        "accountId": "grindrtraffic"
       }
     }
   ],
@@ -181,6 +200,14 @@
           "enabled": true,
           "dmPolicy": "pairing",
           "botToken": "8784180249:AAF-tOYqQN41j1PMsKWlKELeD5AQ_qppSww",
+          "groupPolicy": "allowlist",
+          "streaming": "partial"
+        },
+        "grindrtraffic": {
+          "name": "Grindr Traffic Bot",
+          "enabled": true,
+          "dmPolicy": "pairing",
+          "botToken": "8795497344:AAEh46mB5pLJRWowk49LOGl0WOqJBUD0txo",
           "groupPolicy": "allowlist",
           "streaming": "partial"
         }
