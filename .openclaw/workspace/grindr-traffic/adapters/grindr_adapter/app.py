@@ -13,11 +13,18 @@ from logger import init_logger
 from schemas import (
     ValidationError,
     build_preview_result,
+    build_session_preview_result,
     ensure_object,
+    validate_login_password_payload,
+    validate_login_thirdparty_payload,
     validate_images_update_payload,
     validate_profile_id_payload,
+    validate_refresh_payload,
+    validate_refresh_thirdparty_payload,
+    validate_save_session_payload,
     validate_update_payload,
 )
+from session_store import SessionStoreError, get_session_status, save_session
 from utils import build_error_response, build_success_response
 
 ACTION_ME_GET = "profile.me.get"
@@ -26,6 +33,14 @@ ACTION_ME_UPDATE = "profile.me.update"
 ACTION_ME_IMAGES_UPDATE = "profile.me.images.update"
 ACTION_ME_UPDATE_PREVIEW = "profile.me.update.preview"
 ACTION_ME_IMAGES_UPDATE_PREVIEW = "profile.me.images.update.preview"
+ACTION_SESSION_STATUS_GET = "session.status.get"
+ACTION_SESSION_LOGIN_PASSWORD = "session.login.password"
+ACTION_SESSION_LOGIN_THIRDPARTY = "session.login.thirdparty"
+ACTION_SESSION_REFRESH = "session.refresh"
+ACTION_SESSION_REFRESH_THIRDPARTY = "session.refresh.thirdparty"
+ACTION_SESSION_SAVE = "session.save"
+ACTION_SESSION_LOGIN_PASSWORD_PREVIEW = "session.login.password.preview"
+ACTION_SESSION_LOGIN_THIRDPARTY_PREVIEW = "session.login.thirdparty.preview"
 
 
 def create_app() -> Flask:
@@ -148,6 +163,143 @@ def create_app() -> Flask:
         )
         return jsonify(resp), HTTPStatus.OK
 
+    @app.post("/session/status/get")
+    def session_status_get():
+        """读取本地会话状态（骨架占位）。"""
+
+        status = get_session_status(settings.grindr_session_file)
+        resp = build_success_response(
+            ACTION_SESSION_STATUS_GET,
+            data={
+                "status": status,
+                "placeholder": True,
+                "note": "骨架阶段：仅提供本地会话文件摘要",
+            },
+            meta={"endpoint": "/session/status/get"},
+        )
+        return jsonify(resp), HTTPStatus.OK
+
+    @app.post("/session/login/password/preview")
+    def session_login_password_preview():
+        """预览账号密码登录输入（不请求上游）。"""
+
+        raw = request.get_json(silent=True)
+        payload = ensure_object(raw, action=ACTION_SESSION_LOGIN_PASSWORD_PREVIEW)
+        checked = validate_login_password_payload(payload)
+        preview = build_session_preview_result(checked)
+        resp = build_success_response(
+            ACTION_SESSION_LOGIN_PASSWORD_PREVIEW,
+            data=preview,
+            meta={"endpoint": "preview"},
+        )
+        return jsonify(resp), HTTPStatus.OK
+
+    @app.post("/session/login/thirdparty/preview")
+    def session_login_thirdparty_preview():
+        """预览第三方登录输入（不请求上游）。"""
+
+        raw = request.get_json(silent=True)
+        payload = ensure_object(raw, action=ACTION_SESSION_LOGIN_THIRDPARTY_PREVIEW)
+        checked = validate_login_thirdparty_payload(payload)
+        preview = build_session_preview_result(checked)
+        resp = build_success_response(
+            ACTION_SESSION_LOGIN_THIRDPARTY_PREVIEW,
+            data=preview,
+            meta={"endpoint": "preview"},
+        )
+        return jsonify(resp), HTTPStatus.OK
+
+    @app.post("/session/login/password")
+    def session_login_password():
+        """账号密码登录占位路由。"""
+
+        raw = request.get_json(silent=True)
+        payload = ensure_object(raw, action=ACTION_SESSION_LOGIN_PASSWORD)
+        checked = validate_login_password_payload(payload)
+        resp = build_success_response(
+            ACTION_SESSION_LOGIN_PASSWORD,
+            data={
+                "placeholder": True,
+                "receivedFields": sorted(checked.keys()),
+                "note": "骨架阶段未实现上游登录请求",
+            },
+            meta={"endpoint": "/session/login/password"},
+        )
+        return jsonify(resp), HTTPStatus.OK
+
+    @app.post("/session/login/thirdparty")
+    def session_login_thirdparty():
+        """第三方登录占位路由。"""
+
+        raw = request.get_json(silent=True)
+        payload = ensure_object(raw, action=ACTION_SESSION_LOGIN_THIRDPARTY)
+        checked = validate_login_thirdparty_payload(payload)
+        resp = build_success_response(
+            ACTION_SESSION_LOGIN_THIRDPARTY,
+            data={
+                "placeholder": True,
+                "receivedFields": sorted(checked.keys()),
+                "note": "骨架阶段未实现上游第三方登录请求",
+            },
+            meta={"endpoint": "/session/login/thirdparty"},
+        )
+        return jsonify(resp), HTTPStatus.OK
+
+    @app.post("/session/refresh")
+    def session_refresh():
+        """会话刷新占位路由。"""
+
+        raw = request.get_json(silent=True)
+        payload = ensure_object(raw, action=ACTION_SESSION_REFRESH)
+        checked = validate_refresh_payload(payload)
+        resp = build_success_response(
+            ACTION_SESSION_REFRESH,
+            data={
+                "placeholder": True,
+                "receivedFields": sorted(checked.keys()),
+                "note": "骨架阶段未实现上游刷新请求",
+            },
+            meta={"endpoint": "/session/refresh"},
+        )
+        return jsonify(resp), HTTPStatus.OK
+
+    @app.post("/session/refresh/thirdparty")
+    def session_refresh_thirdparty():
+        """第三方会话刷新占位路由。"""
+
+        raw = request.get_json(silent=True)
+        payload = ensure_object(raw, action=ACTION_SESSION_REFRESH_THIRDPARTY)
+        checked = validate_refresh_thirdparty_payload(payload)
+        resp = build_success_response(
+            ACTION_SESSION_REFRESH_THIRDPARTY,
+            data={
+                "placeholder": True,
+                "receivedFields": sorted(checked.keys()),
+                "note": "骨架阶段未实现上游第三方刷新请求",
+            },
+            meta={"endpoint": "/session/refresh/thirdparty"},
+        )
+        return jsonify(resp), HTTPStatus.OK
+
+    @app.post("/session/save")
+    def session_save():
+        """保存会话到本地文件。"""
+
+        raw = request.get_json(silent=True)
+        payload = ensure_object(raw, action=ACTION_SESSION_SAVE)
+        checked = validate_save_session_payload(payload)
+        result = save_session(settings.grindr_session_file, checked)
+        resp = build_success_response(
+            ACTION_SESSION_SAVE,
+            data={
+                "placeholder": True,
+                "saveResult": result,
+                "note": "骨架阶段仅实现本地会话文件保存",
+            },
+            meta={"endpoint": "/session/save"},
+        )
+        return jsonify(resp), HTTPStatus.OK
+
     @app.route("/health", methods=["GET", "POST"])
     def health():
         """健康检查路由。"""
@@ -179,6 +331,20 @@ def create_app() -> Flask:
             http_status=err.http_status,
             retry_count=err.retry_count,
             endpoint=err.endpoint,
+        )
+        return jsonify(payload), err.http_status
+
+    @app.errorhandler(SessionStoreError)
+    def handle_session_store_error(err: SessionStoreError):
+        """会话文件读写错误处理。"""
+
+        payload = build_error_response(
+            action="session.store",
+            code=err.code,
+            message=err.message,
+            http_status=err.http_status,
+            retry_count=0,
+            endpoint=request.path,
         )
         return jsonify(payload), err.http_status
 

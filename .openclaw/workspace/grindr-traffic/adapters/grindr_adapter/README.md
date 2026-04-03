@@ -1,14 +1,11 @@
-# grindr_adapter（可运行版）
+# grindr_adapter（profile + session-auth）
 
 ## 项目简介
-`grindr_adapter` 是 `grindr-profile-manager` 的本地 HTTP 适配层。
-当前实现：
-- Flask 轻量服务
-- 统一响应结构
-- 通过 requests 封装上游 GET/PUT
-- timeout/connection/5xx 重试（4xx 不重试）
-- 输入校验 + preview（本地校验，不请求上游）
-- 文件日志（不记录 secrets）
+`grindr_adapter` 是 `grindr-traffic` 工作区内唯一的 Grindr API 适配层。
+
+当前状态：
+- `grindr-profile-manager`：已具备基础可用路由（含 preview）。
+- `grindr-session-auth`：本次新增骨架路由与会话文件存储占位，不包含完整登录/刷新上游逻辑。
 
 ## 目录结构
 ```text
@@ -18,25 +15,27 @@ adapters/grindr_adapter/
 ├── config.py
 ├── logger.py
 ├── schemas.py
+├── session_store.py
 ├── utils.py
 ├── requirements.txt
 └── README.md
 ```
 
-## 完整启动步骤
+## 启动方式
 1. 进入工作区：
    ```bash
    cd .openclaw/workspace/grindr-traffic
    ```
-2. 准备环境文件：
+2. 准备配置：
    ```bash
    cp .secrets/grindr.env.example .secrets/grindr.env
+   cp .secrets/grindr.session.json.example .secrets/grindr.session.json
    ```
-3. 安装依赖（本机运行时）：
+3. 安装依赖：
    ```bash
    python3 -m pip install -r adapters/grindr_adapter/requirements.txt
    ```
-4. 启动 adapter（默认 `127.0.0.1:8787`）：
+4. 启动服务（默认 `127.0.0.1:8787`）：
    ```bash
    bash scripts/start_grindr_adapter.sh
    ```
@@ -45,46 +44,21 @@ adapters/grindr_adapter/
    curl http://127.0.0.1:8787/health
    ```
 
-## Docker 运行
-```bash
-docker compose build grindr-adapter
-docker compose up -d grindr-adapter
-curl http://127.0.0.1:8787/health
-```
+## 骨架路由清单（session-auth）
+- `POST /session/status/get`
+- `POST /session/login/password`
+- `POST /session/login/thirdparty`
+- `POST /session/refresh`
+- `POST /session/refresh/thirdparty`
+- `POST /session/save`
+- `POST /session/login/password/preview`
+- `POST /session/login/thirdparty/preview`
 
-## Shell 调用示例
-```bash
-# 读取当前资料
-bash skills/grindr-profile-manager/scripts/get_me_profile.sh
+说明：以上路由当前以输入校验、结构化回包、本地会话文件读写占位为主，不执行完整上游登录请求。
 
-# 读取指定资料
-bash skills/grindr-profile-manager/scripts/get_user_profile.sh '{"profileId":827555450}'
-
-# 正式更新（务必先 preview）
-bash skills/grindr-profile-manager/scripts/update_profile.sh '{"displayName":"Alex"}'
-bash skills/grindr-profile-manager/scripts/update_profile_images.sh '{"primaryImageHash":"abc123"}'
-```
-
-## Preview 示例
-```bash
-bash skills/grindr-profile-manager/scripts/preview_update_profile.sh '{"displayName":"Alex"}'
-bash skills/grindr-profile-manager/scripts/preview_update_profile_images.sh '{"primaryImageHash":"abc123"}'
-```
-
-## 常见错误
-- `MISSING_PAYLOAD`：脚本缺少 JSON 参数。
-- `ADAPTER_UNREACHABLE`：本地 adapter 未启动或端口不对。
-- `CONFIG_ERROR`：`.secrets/grindr.env` 缺失或含 `replace_me`。
-- `HTTP_4xx/5xx`：上游返回错误，检查 token、device id、payload。
-
-## 联调顺序建议
-1. 先启动 adapter（`bash scripts/start_grindr_adapter.sh`）
-2. 跑 preview（文本 / 图片）
-3. 跑 `get_me_profile`
-4. 跑 `get_user_profile`
-5. 最后跑 `update_*`
-
-## 端口与路径约定
-- adapter 本地固定：`127.0.0.1:8787`
-- shell 脚本固定调用 `http://127.0.0.1:8787/...`
-- 默认环境文件：`.openclaw/workspace/grindr-traffic/.secrets/grindr.env`
+## 后续待实现点
+- 接入真实上游登录、刷新接口（含错误码映射）。
+- 会话文件加密与脱敏存储策略。
+- 会话过期判断与自动续期。
+- 对第三方登录供应商做更细粒度 schema 校验。
+- 增加 session-auth 的集成测试与重试策略验证。

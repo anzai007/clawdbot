@@ -35,5 +35,22 @@ set -a
 source "${ENV_FILE}"
 set +a
 
+# 会话文件缺失时自动从示例创建，避免 session-auth 骨架路由首次启动失败。
+SESSION_FILE_VALUE="${GRINDR_SESSION_FILE:-./.secrets/grindr.session.json}"
+if [[ "${SESSION_FILE_VALUE}" = /* ]]; then
+  SESSION_FILE_PATH="${SESSION_FILE_VALUE}"
+else
+  SESSION_FILE_PATH="${WORKSPACE_DIR}/${SESSION_FILE_VALUE#./}"
+fi
+
+if [[ ! -f "${SESSION_FILE_PATH}" ]]; then
+  mkdir -p "$(dirname "${SESSION_FILE_PATH}")"
+  if [[ -f "${WORKSPACE_DIR}/.secrets/grindr.session.json.example" ]]; then
+    cp "${WORKSPACE_DIR}/.secrets/grindr.session.json.example" "${SESSION_FILE_PATH}"
+  else
+    printf '{\"authToken\":\"replace_me\",\"sessionToken\":\"replace_me\",\"thirdPartyUserId\":\"replace_me\",\"thirdPartyVendor\":\"apple\",\"updatedAt\":\"replace_me\",\"source\":\"bootstrap\"}\\n' > "${SESSION_FILE_PATH}"
+  fi
+fi
+
 cd "${ADAPTER_DIR}"
 ADAPTER_HOST="${HOST}" ADAPTER_PORT="${PORT}" python3 app.py

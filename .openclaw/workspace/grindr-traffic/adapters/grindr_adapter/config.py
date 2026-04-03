@@ -26,6 +26,7 @@ class Settings:
     grindr_timeout_seconds: int
     grindr_retry_times: int
     grindr_log_dir: str
+    grindr_session_file: str
     env_file: str
 
 
@@ -111,6 +112,12 @@ def load_settings() -> Settings:
 
     log_dir = merged.get("GRINDR_LOG_DIR", "./logs").strip() or "./logs"
     log_dir_path = (env_path.parent / log_dir).resolve() if not Path(log_dir).is_absolute() else Path(log_dir)
+    session_file = merged.get("GRINDR_SESSION_FILE", "./.secrets/grindr.session.json").strip() or "./.secrets/grindr.session.json"
+    session_file_path = (
+        (_workspace_root() / session_file).resolve()
+        if not Path(session_file).is_absolute()
+        else Path(session_file)
+    )
 
     return Settings(
         grindr_base_url=base_url,
@@ -124,5 +131,6 @@ def load_settings() -> Settings:
         grindr_timeout_seconds=timeout_seconds,
         grindr_retry_times=retry_times,
         grindr_log_dir=str(log_dir_path),
+        grindr_session_file=str(session_file_path),
         env_file=str(env_path),
     )
