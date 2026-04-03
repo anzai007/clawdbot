@@ -72,6 +72,28 @@ class GrindrClient:
             payload=None,
             use_auth=use_auth,
             auth_token=auth_token,
+            query=None,
+        )
+
+    def get_with_query(
+        self,
+        endpoint: str,
+        *,
+        action: str,
+        query: dict[str, Any] | None,
+        use_auth: bool = True,
+        auth_token: str | None = None,
+    ) -> dict[str, Any]:
+        """执行带查询参数的 GET 请求。"""
+
+        return self._request(
+            "GET",
+            endpoint,
+            action=action,
+            payload=None,
+            use_auth=use_auth,
+            auth_token=auth_token,
+            query=query,
         )
 
     def put(
@@ -92,6 +114,7 @@ class GrindrClient:
             payload=payload,
             use_auth=use_auth,
             auth_token=auth_token,
+            query=None,
         )
 
     def post(
@@ -112,6 +135,7 @@ class GrindrClient:
             payload=payload,
             use_auth=use_auth,
             auth_token=auth_token,
+            query=None,
         )
 
     def _request(
@@ -123,6 +147,7 @@ class GrindrClient:
         payload: dict[str, Any] | None,
         use_auth: bool,
         auth_token: str | None,
+        query: dict[str, Any] | None,
     ) -> dict[str, Any]:
         """统一请求处理。
 
@@ -143,6 +168,7 @@ class GrindrClient:
                     url=url,
                     headers=self._headers(use_auth=use_auth, auth_token=auth_token),
                     json=payload,
+                    params=query,
                     timeout=self.settings.grindr_timeout_seconds,
                 )
 

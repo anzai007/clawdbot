@@ -20,6 +20,7 @@ from schemas import (
     validate_auth_refresh_session_payload,
     validate_auth_refresh_thirdparty_payload,
     validate_auth_session_save_payload,
+    validate_discovery_list_payload,
     validate_images_update_payload,
     validate_profile_id_payload,
     validate_update_payload,
@@ -40,6 +41,9 @@ ACTION_ME_UPDATE = "profile.me.update"
 ACTION_ME_IMAGES_UPDATE = "profile.me.images.update"
 ACTION_ME_UPDATE_PREVIEW = "profile.me.update.preview"
 ACTION_ME_IMAGES_UPDATE_PREVIEW = "profile.me.images.update.preview"
+ACTION_DISCOVERY_NEARBY_GET = "discovery.nearby.get"
+ACTION_DISCOVERY_VIEWED_ME_GET = "discovery.viewed_me.get"
+ACTION_DISCOVERY_USER_PROFILE_GET = "discovery.user_profile.get"
 
 ACTION_AUTH_SESSION_STATUS = "auth.session.status"
 ACTION_AUTH_LOGIN_PASSWORD = "auth.login.password"
@@ -74,6 +78,14 @@ def _session_result_payload(
         "sessionStatus": get_session_status(session_file),
         "upstream": summarize_upstream_body(upstream_body),
     }
+
+
+def _json_or_empty_object(raw: Any, *, action: str) -> dict[str, Any]:
+    """读取请求体；空体按空对象处理，便于纯读取路由免参调用。"""
+
+    if raw is None:
+        return {}
+    return ensure_object(raw, action=action)
 
 
 def create_app() -> Flask:
@@ -195,6 +207,78 @@ def create_app() -> Flask:
             ACTION_ME_IMAGES_UPDATE_PREVIEW,
             data=preview,
             meta={"endpoint": "preview"},
+        )
+        return jsonify(resp), HTTPStatus.OK
+
+    # ===== discovery-reader 路由（读取能力） =====
+    @app.post("/discovery/nearby/get")
+    def discovery_nearby_get():
+        """读取附近用户列表。"""
+
+        raw = request.get_json(silent=True)
+        payload = _json_or_empty_object(raw, action=ACTION_DISCOVERY_NEARBY_GET)
+        checked = validate_discovery_list_payload(payload)
+
+        result = client.get_with_query(
+            settings.grindr_discovery_nearby_endpoint,
+            action=ACTION_DISCOVERY_NEARBY_GET,
+            query=checked,
+            use_auth=True,
+        )
+        resp = build_success_response(
+            ACTION_DISCOVERY_NEARBY_GET,
+            data=result["body"],
+            meta={
+                "httpStatus": result["httpStatus"],
+                "retryCount": result["retryCount"],
+                "endpoint": result["endpoint"],
+            },
+        )
+        return jsonify(resp), HTTPStatus.OK
+
+    @app.post("/discovery/viewed-me/get")
+    def discovery_viewed_me_get():
+        """读取看过我的列表。"""
+
+        raw = request.get_json(silent=True)
+        payload = _json_or_empty_object(raw, action=ACTION_DISCOVERY_VIEWED_ME_GET)
+        checked = validate_discovery_list_payload(payload)
+
+        result = client.get_with_query(
+            settings.grindr_discovery_viewed_me_endpoint,
+            action=ACTION_DISCOVERY_VIEWED_ME_GET,
+            query=checked,
+            use_auth=True,
+        )
+        resp = build_success_response(
+            ACTION_DISCOVERY_VIEWED_ME_GET,
+            data=result["body"],
+            meta={
+                "httpStatus": result["httpStatus"],
+                "retryCount": result["retryCount"],
+                "endpoint": result["endpoint"],
+            },
+        )
+        return jsonify(resp), HTTPStatus.OK
+
+    @app.post("/discovery/user/get")
+    def discovery_user_profile_get():
+        """读取指定用户资料。"""
+
+        raw = request.get_json(silent=True)
+        payload = ensure_object(raw, action=ACTION_DISCOVERY_USER_PROFILE_GET)
+        profile_id = validate_profile_id_payload(payload)
+
+        endpoint = f"/v7/profiles/{profile_id}"
+        result = client.get(endpoint, action=ACTION_DISCOVERY_USER_PROFILE_GET, use_auth=True)
+        resp = build_success_response(
+            ACTION_DISCOVERY_USER_PROFILE_GET,
+            data=result["body"],
+            meta={
+                "httpStatus": result["httpStatus"],
+                "retryCount": result["retryCount"],
+                "endpoint": result["endpoint"],
+            },
         )
         return jsonify(resp), HTTPStatus.OK
 

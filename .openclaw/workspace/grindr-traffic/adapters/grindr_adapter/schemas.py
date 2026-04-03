@@ -50,6 +50,36 @@ def validate_profile_id_payload(payload: dict[str, Any]) -> int:
     return profile_id
 
 
+def validate_discovery_list_payload(payload: dict[str, Any]) -> dict[str, Any]:
+    """校验发现页列表查询参数。
+
+    当前最小规则：
+    - `limit` 可选，必须是 1~200 的整数
+    - `cursor` 可选，必须是非空字符串
+    - 其他字段先透传，留给上游按需处理
+    """
+
+    if not payload:
+        return {}
+
+    normalized = dict(payload)
+
+    if "limit" in normalized:
+        limit = normalized["limit"]
+        if not isinstance(limit, int):
+            raise ValidationError("INVALID_LIMIT", "limit 必须是整数", http_status=400)
+        if limit <= 0 or limit > 200:
+            raise ValidationError("INVALID_LIMIT", "limit 必须在 1~200 之间", http_status=400)
+
+    if "cursor" in normalized:
+        cursor = normalized["cursor"]
+        if not isinstance(cursor, str) or not cursor.strip():
+            raise ValidationError("INVALID_CURSOR", "cursor 必须是非空字符串", http_status=400)
+        normalized["cursor"] = cursor.strip()
+
+    return normalized
+
+
 def validate_update_payload(payload: dict[str, Any]) -> dict[str, Any]:
     """校验资料更新 payload 不能为空。"""
 

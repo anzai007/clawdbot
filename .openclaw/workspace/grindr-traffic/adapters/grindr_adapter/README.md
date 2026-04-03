@@ -1,9 +1,10 @@
 # grindr_adapter（profile + session-auth 可运行版）
 
 ## 项目简介
-`grindr_adapter` 是 `grindr-traffic` 工作区中唯一的 Grindr 适配层，统一服务两个 skill：
+`grindr_adapter` 是 `grindr-traffic` 工作区中唯一的 Grindr 适配层，统一服务三个 skill：
 - `grindr-profile-manager`：资料读取、预览、更新。
 - `grindr-session-auth`：会话状态、登录、刷新、保存。
+- `grindr-discovery-reader`：附近用户、看过我的、指定用户资料读取。
 
 目标：
 - 所有 skill 均只走 localhost adapter，不直接请求上游。
@@ -29,6 +30,9 @@ adapters/grindr_adapter/
 - session 文件：由 `GRINDR_SESSION_FILE` 指定（默认 `./.secrets/grindr.session.json`）
 - adapter 监听：`127.0.0.1:8787`
 - skill 固定请求：`http://127.0.0.1:8787/...`
+- discovery 上游 endpoint（可选）：
+  - `GRINDR_DISCOVERY_NEARBY_ENDPOINT`（默认 `/v1/cascade`）
+  - `GRINDR_DISCOVERY_VIEWED_ME_ENDPOINT`（默认 `/v7/views/list`）
 
 ## 完整启动步骤
 1. 进入工作区：
@@ -71,6 +75,11 @@ adapters/grindr_adapter/
 - `POST /auth/session/refresh/thirdparty`
 - `POST /auth/session/save`
 
+## Discovery Reader 路由（grindr-discovery-reader）
+- `POST /discovery/nearby/get`
+- `POST /discovery/viewed-me/get`
+- `POST /discovery/user/get`
+
 ## Shell 调用示例
 ### profile-manager
 ```bash
@@ -86,6 +95,13 @@ bash skills/grindr-session-auth/scripts/get_session_status.sh
 bash skills/grindr-session-auth/scripts/preview_login_password.sh '{"email":"user@example.com","password":"secret"}'
 bash skills/grindr-session-auth/scripts/login_password.sh '{"email":"user@example.com","password":"secret"}'
 bash skills/grindr-session-auth/scripts/save_session.sh '{"authToken":"replace_me","sessionToken":"replace_me","source":"manual"}'
+```
+
+### discovery-reader
+```bash
+bash skills/grindr-discovery-reader/scripts/get_nearby_profiles.sh '{"limit":30}'
+bash skills/grindr-discovery-reader/scripts/get_viewed_me.sh '{"limit":30}'
+bash skills/grindr-discovery-reader/scripts/get_user_profile.sh '{"profileId":827555450}'
 ```
 
 ## Preview 示例

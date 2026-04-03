@@ -27,6 +27,8 @@ class Settings:
     grindr_retry_times: int
     grindr_log_dir: str
     grindr_session_file: str
+    grindr_discovery_nearby_endpoint: str
+    grindr_discovery_viewed_me_endpoint: str
     env_file: str
 
 
@@ -97,6 +99,15 @@ def _resolve_path(raw_value: str, *, base: Path) -> Path:
     return (base / raw_value).resolve()
 
 
+def _normalize_endpoint(raw_value: str, *, default: str) -> str:
+    """规范化 endpoint：空值回退默认，且必须以 / 开头。"""
+
+    value = raw_value.strip() or default
+    if not value.startswith("/"):
+        value = f"/{value}"
+    return value
+
+
 def load_settings() -> Settings:
     """加载运行配置。
 
@@ -139,6 +150,14 @@ def load_settings() -> Settings:
     workspace = _workspace_root()
     log_dir_path = _resolve_path(log_dir_raw, base=workspace)
     session_file_path = _resolve_path(session_file_raw, base=workspace)
+    nearby_endpoint = _normalize_endpoint(
+        _optional_value(merged, "GRINDR_DISCOVERY_NEARBY_ENDPOINT", default="/v1/cascade"),
+        default="/v1/cascade",
+    )
+    viewed_me_endpoint = _normalize_endpoint(
+        _optional_value(merged, "GRINDR_DISCOVERY_VIEWED_ME_ENDPOINT", default="/v7/views/list"),
+        default="/v7/views/list",
+    )
 
     return Settings(
         grindr_base_url=base_url,
@@ -153,5 +172,7 @@ def load_settings() -> Settings:
         grindr_retry_times=retry_times,
         grindr_log_dir=str(log_dir_path),
         grindr_session_file=str(session_file_path),
+        grindr_discovery_nearby_endpoint=nearby_endpoint,
+        grindr_discovery_viewed_me_endpoint=viewed_me_endpoint,
         env_file=str(env_path),
     )
