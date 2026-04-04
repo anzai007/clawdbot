@@ -29,6 +29,7 @@ __openclaw_vitest__/
 !.openclaw/workspace/meta-ads/SOUL.md
 !.openclaw/workspace/meta-ads/TOOLS.md
 !.openclaw/workspace/grindr-traffic/
+!.openclaw/workspace/grindr-traffic/AGENTS.md
 !.openclaw/workspace/grindr-traffic/.secrets/
 !.openclaw/workspace/grindr-traffic/.secrets/grindr.env.example
 !.openclaw/workspace/grindr-traffic/skills/
