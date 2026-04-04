@@ -19,8 +19,8 @@ if ! command -v curl >/dev/null 2>&1; then
   exit 1
 fi
 
-if ! command -v jq >/dev/null 2>&1; then
-  json_error "MISSING_DEPENDENCY" "未找到 jq，请先安装 jq"
+if ! command -v python3 >/dev/null 2>&1; then
+  json_error "MISSING_DEPENDENCY" "未找到 python3，请先安装 python3"
   exit 1
 fi
 
@@ -41,20 +41,76 @@ HTTP_STATUS="$(curl -sS -G "$API_URL" \
   -w "%{http_code}")"
 
 if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
-  MESSAGE="$(jq -c . "$TMP_BODY" 2>/dev/null || cat "$TMP_BODY")"
-  printf '{"success":false,"error":{"code":"HTTP_%s","message":"请求三方 API 失败","detail":%s}}\n' "$HTTP_STATUS" "$MESSAGE"
+  # 使用 Python 兼容 JSON/文本两类错误体，避免依赖 jq。
+  python3 - "$HTTP_STATUS" "$TMP_BODY" <<'PY'
+import json
+import pathlib
+import sys
+
+status = sys.argv[1]
+body_path = pathlib.Path(sys.argv[2])
+raw = body_path.read_text(encoding="utf-8", errors="replace")
+detail = raw
+try:
+    detail = json.loads(raw)
+except Exception:
+    detail = raw
+
+print(
+    json.dumps(
+        {
+            "success": False,
+            "error": {
+                "code": f"HTTP_{status}",
+                "message": "请求三方 API 失败",
+                "detail": detail,
+            },
+        },
+        ensure_ascii=False,
+    )
+)
+PY
   exit 1
 fi
 
-# 只返回首条结果，避免多条候选影响上层消费。
-if [ "$(jq 'length' "$TMP_BODY")" -eq 0 ]; then
-  printf '{"lat":null,"long":null}\n'
-  exit 0
-fi
+# 只返回首条结果（lat/long），避免多条候选影响上层消费。
+python3 - "$TMP_BODY" <<'PY'
+import json
+import pathlib
+import sys
 
-jq -c '
-{
-  lat: .[0].lat,
-  long: .[0].lon
-}
-' "$TMP_BODY"
+body_path = pathlib.Path(sys.argv[1])
+raw = body_path.read_text(encoding="utf-8", errors="replace")
+
+try:
+    payload = json.loads(raw)
+except Exception:
+    print(
+        json.dumps(
+            {
+                "success": False,
+                "error": {
+                    "code": "INVALID_JSON",
+                    "message": "三方 API 返回的不是合法 JSON",
+                },
+            },
+            ensure_ascii=False,
+        )
+    )
+    raise SystemExit(1)
+
+if not isinstance(payload, list) or len(payload) == 0:
+    print(json.dumps({"lat": None, "long": None}, ensure_ascii=False))
+    raise SystemExit(0)
+
+first = payload[0] if isinstance(payload[0], dict) else {}
+print(
+    json.dumps(
+        {
+            "lat": first.get("lat"),
+            "long": first.get("lon"),
+        },
+        ensure_ascii=False,
+    )
+)
+PY
