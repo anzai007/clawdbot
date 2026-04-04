@@ -36,6 +36,7 @@ from session_store import (
     summarize_upstream_body,
 )
 from utils import build_error_response, build_success_response
+from ws_connection import WsConnectionError, WsConnectionManager
 
 ACTION_ME_GET = "profile.me.get"
 ACTION_USER_GET = "profile.user.get"
@@ -58,9 +59,13 @@ ACTION_AUTH_SESSION_SAVE = "auth.session.save"
 ACTION_AUTH_AUTO_REFRESH = "auth.auto.refresh"
 ACTION_AUTH_AUTO_LOGIN_PASSWORD = "auth.auto.login.password"
 ACTION_CHAT_WS_CONFIG_GET = "chat.ws.config.get"
+ACTION_CHAT_WS_CONNECTION_STATUS = "chat.ws.connection.status"
+ACTION_CHAT_WS_CONNECTION_CONNECT = "chat.ws.connection.connect"
+ACTION_CHAT_WS_CONNECTION_DISCONNECT = "chat.ws.connection.disconnect"
 ACTION_CHAT_WS_REQUEST_PREVIEW = "chat.ws.request.preview"
 ACTION_CHAT_WS_REQUEST_SEND = "chat.ws.request.send"
 ACTION_CHAT_WS_NOTIFY_PARSE = "chat.ws.notify.parse"
+ACTION_CHAT_WS_NOTIFY_PULL = "chat.ws.notify.pull"
 
 _GEOHASH_BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz"
 
@@ -316,6 +321,20 @@ def create_app() -> Flask:
 
             logger.info("401 自动补救完成，重试动作：%s", action)
             return fn()
+
+    # WebSocket 长连接管理器：负责 connect/send/recv/状态维护。
+    ws_manager = WsConnectionManager(
+        logger=logger,
+        ws_base_url=settings.grindr_im_ws_base_url,
+        auth_scheme=settings.grindr_auth_scheme,
+        token_provider=_resolve_runtime_session_token,
+        user_agent=settings.grindr_user_agent,
+        device_id=settings.grindr_device_id,
+        device_info=settings.grindr_device_info,
+        locale=settings.grindr_locale,
+        time_zone=settings.grindr_time_zone,
+        packet_validator=lambda payload: validate_ws_packet_payload(payload, allow_notify_types=True),
+    )
 
     # ===== profile-manager 路由（保持兼容） =====
     @app.post("/profile/me/get")
@@ -765,25 +784,66 @@ def create_app() -> Flask:
         )
         return jsonify(resp), HTTPStatus.OK
 
-    # ===== chat-manager（WebSocket 协议骨架） =====
+    # ===== chat-manager（WebSocket 长连接） =====
     @app.post("/chat/ws/config/get")
     def chat_ws_config_get():
-        """返回 WS 配置与协议能力（骨架阶段）。"""
+        """返回 WS 配置与协议能力。"""
 
         resp = build_success_response(
             ACTION_CHAT_WS_CONFIG_GET,
             data={
-                "wsBaseUrl": settings.grindr_im_ws_base_url,
+                "wsBaseUrl": ws_manager.status().get("wsBaseUrlMasked"),
                 "supportedTypes": ws_supported_types(),
-                "mode": "framework",
+                "connection": ws_manager.status(),
             },
             meta={"endpoint": "/chat/ws/config/get"},
         )
         return jsonify(resp), HTTPStatus.OK
 
+    @app.post("/chat/ws/connection/status")
+    def chat_ws_connection_status():
+        """查询当前 WS 长连接状态。"""
+
+        resp = build_success_response(
+            ACTION_CHAT_WS_CONNECTION_STATUS,
+            data=ws_manager.status(),
+            meta={"endpoint": "/chat/ws/connection/status"},
+        )
+        return jsonify(resp), HTTPStatus.OK
+
+    @app.post("/chat/ws/connection/connect")
+    def chat_ws_connection_connect():
+        """主动建立 WS 长连接。"""
+
+        raw = request.get_json(silent=True)
+        payload = _json_or_empty_object(raw, action=ACTION_CHAT_WS_CONNECTION_CONNECT)
+        force_reconnect = payload.get("forceReconnect", False)
+        if not isinstance(force_reconnect, bool):
+            raise ValidationError("INVALID_FORCE_RECONNECT", "forceReconnect 必须是布尔值", http_status=400)
+
+        data = ws_manager.ensure_connected(force_reconnect=force_reconnect)
+        resp = build_success_response(
+            ACTION_CHAT_WS_CONNECTION_CONNECT,
+            data=data,
+            meta={"endpoint": "/chat/ws/connection/connect"},
+        )
+        return jsonify(resp), HTTPStatus.OK
+
+    @app.post("/chat/ws/connection/disconnect")
+    def chat_ws_connection_disconnect():
+        """主动断开 WS 长连接。"""
+
+        data = ws_manager.disconnect(reason="manual_disconnect")
+        resp = build_success_response(
+            ACTION_CHAT_WS_CONNECTION_DISCONNECT,
+            data=data,
+            meta={"endpoint": "/chat/ws/connection/disconnect"},
+        )
+        return jsonify(resp), HTTPStatus.OK
+
     @app.post("/chat/ws/request/preview")
     def chat_ws_request_preview():
-        """校验客户端 -> 服务端的 WS 协议包（不做真实网络发送）。"""
+        """校验客户端 -> 服务端的 WS 协议包（不发送）。"""
 
         raw = request.get_json(silent=True)
         payload = ensure_object(raw, action=ACTION_CHAT_WS_REQUEST_PREVIEW)
@@ -802,24 +862,21 @@ def create_app() -> Flask:
 
     @app.post("/chat/ws/request/send")
     def chat_ws_request_send():
-        """WS 请求发送占位路由。
-
-        说明：
-        - 当前阶段仅完成 skill 骨架与协议校验。
-        - 该路由返回“已校验未发送”，便于上层联调脚本先跑通。
-        """
+        """通过长连接发送 WS 协议包。"""
 
         raw = request.get_json(silent=True)
         payload = ensure_object(raw, action=ACTION_CHAT_WS_REQUEST_SEND)
         checked = validate_ws_packet_payload(payload, allow_notify_types=False)
+        send_result = ws_manager.send_packet(checked, auto_connect=True)
 
         resp = build_success_response(
             ACTION_CHAT_WS_REQUEST_SEND,
             data={
-                "executed": False,
+                "executed": send_result["sent"],
                 "packet": checked,
-                "wsBaseUrl": settings.grindr_im_ws_base_url,
-                "message": "当前为 skill 骨架阶段：协议校验已完成，真实 WS 发送尚未启用",
+                "connection": send_result["connection"],
+                "requestId": send_result["requestId"],
+                "type": send_result["type"],
             },
             meta={"endpoint": "/chat/ws/request/send"},
         )
@@ -837,6 +894,28 @@ def create_app() -> Flask:
             ACTION_CHAT_WS_NOTIFY_PARSE,
             data={"valid": True, "packet": checked},
             meta={"endpoint": "/chat/ws/notify/parse"},
+        )
+        return jsonify(resp), HTTPStatus.OK
+
+    @app.post("/chat/ws/notify/pull")
+    def chat_ws_notify_pull():
+        """拉取接收缓冲中的通知。"""
+
+        raw = request.get_json(silent=True)
+        payload = _json_or_empty_object(raw, action=ACTION_CHAT_WS_NOTIFY_PULL)
+
+        limit = payload.get("limit", 20)
+        clear = payload.get("clear", True)
+        if not isinstance(limit, int):
+            raise ValidationError("INVALID_LIMIT", "limit 必须是整数", http_status=400)
+        if not isinstance(clear, bool):
+            raise ValidationError("INVALID_CLEAR", "clear 必须是布尔值", http_status=400)
+
+        data = ws_manager.pull_notifications(limit=limit, clear=clear)
+        resp = build_success_response(
+            ACTION_CHAT_WS_NOTIFY_PULL,
+            data=data,
+            meta={"endpoint": "/chat/ws/notify/pull"},
         )
         return jsonify(resp), HTTPStatus.OK
 
@@ -880,6 +959,20 @@ def create_app() -> Flask:
 
         payload = build_error_response(
             action="session.store",
+            code=err.code,
+            message=err.message,
+            http_status=err.http_status,
+            retry_count=0,
+            endpoint=request.path,
+        )
+        return jsonify(payload), err.http_status
+
+    @app.errorhandler(WsConnectionError)
+    def handle_ws_connection_error(err: WsConnectionError):
+        """WebSocket 连接错误处理。"""
+
+        payload = build_error_response(
+            action="chat.ws.connection",
             code=err.code,
             message=err.message,
             http_status=err.http_status,

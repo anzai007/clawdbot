@@ -1,7 +1,7 @@
 ---
 name: grindr-chat-manager
 version: 0.1.0
-description: 基于 WebSocket IM 协议的 Grindr 私信管理技能（骨架版）。
+description: 基于 WebSocket IM 协议的 Grindr 私信管理技能（长连接版）。
 author: local
 ---
 
@@ -15,16 +15,21 @@ author: local
 - 对消息动作（连接、发送、已读、撤回、删除、媒体发送）进行统一入口管理。
 - 先通过 adapter 完成协议预校验，后续再接入真实 WS 长连发送。
 
-## 当前阶段说明（骨架）
+## 当前阶段说明（长连接）
 - 已提供协议字段校验与结构化脚本入口。
 - 已支持 `GRINDR_IM_WS_BASE_URL` 配置读取。
-- `send` 路由当前为骨架占位：返回“已校验未发送”。
+- `send` 路由会自动建立（或复用）WS 长连接并发送协议包。
+- 支持连接状态查询、主动连接/断开、通知缓冲拉取。
 
 ## 支持动作
 - 获取 WS 配置：`/chat/ws/config/get`
+- 查询连接状态：`/chat/ws/connection/status`
+- 主动建立连接：`/chat/ws/connection/connect`
+- 主动断开连接：`/chat/ws/connection/disconnect`
 - 预览协议包：`/chat/ws/request/preview`
-- 发送协议包（骨架占位）：`/chat/ws/request/send`
+- 发送协议包（真实发送）：`/chat/ws/request/send`
 - 解析通知包：`/chat/ws/notify/parse`
+- 拉取通知缓冲：`/chat/ws/notify/pull`
 
 ## 支持的协议类型
 - `userConnect`
@@ -55,6 +60,10 @@ author: local
 ```bash
 # 在 .openclaw/workspace/grindr-traffic 目录执行
 bash skills/grindr-chat-manager/scripts/get_ws_config.sh
+bash skills/grindr-chat-manager/scripts/ws_status.sh
+bash skills/grindr-chat-manager/scripts/ws_connect.sh true
+bash skills/grindr-chat-manager/scripts/ws_disconnect.sh
+bash skills/grindr-chat-manager/scripts/ws_pull_notify.sh 20 true
 bash skills/grindr-chat-manager/scripts/preview_packet.sh '{"requestId":1,"type":"userList","data":[]}'
 bash skills/grindr-chat-manager/scripts/send_packet.sh '{"requestId":2,"type":"userConnect","data":[{"user":"110099028"}]}'
 

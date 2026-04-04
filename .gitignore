@@ -77,6 +77,10 @@ __openclaw_vitest__/
 !.openclaw/workspace/grindr-traffic/skills/grindr-chat-manager/scripts/message_recall.sh
 !.openclaw/workspace/grindr-traffic/skills/grindr-chat-manager/scripts/message_delete.sh
 !.openclaw/workspace/grindr-traffic/skills/grindr-chat-manager/scripts/send_media.sh
+!.openclaw/workspace/grindr-traffic/skills/grindr-chat-manager/scripts/ws_connect.sh
+!.openclaw/workspace/grindr-traffic/skills/grindr-chat-manager/scripts/ws_status.sh
+!.openclaw/workspace/grindr-traffic/skills/grindr-chat-manager/scripts/ws_disconnect.sh
+!.openclaw/workspace/grindr-traffic/skills/grindr-chat-manager/scripts/ws_pull_notify.sh
 !.openclaw/workspace/grindr-traffic/adapters/
 !.openclaw/workspace/grindr-traffic/adapters/grindr_adapter/
 !.openclaw/workspace/grindr-traffic/adapters/grindr_adapter/app.py
@@ -84,6 +88,7 @@ __openclaw_vitest__/
 !.openclaw/workspace/grindr-traffic/adapters/grindr_adapter/config.py
 !.openclaw/workspace/grindr-traffic/adapters/grindr_adapter/logger.py
 !.openclaw/workspace/grindr-traffic/adapters/grindr_adapter/schemas.py
+!.openclaw/workspace/grindr-traffic/adapters/grindr_adapter/ws_connection.py
 !.openclaw/workspace/grindr-traffic/adapters/grindr_adapter/utils.py
 !.openclaw/workspace/grindr-traffic/adapters/grindr_adapter/requirements.txt
 !.openclaw/workspace/grindr-traffic/adapters/grindr_adapter/README.md

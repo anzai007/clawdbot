@@ -25,11 +25,11 @@ if ! command -v python3 >/dev/null 2>&1; then
 fi
 
 if ! python3 - <<'PY' >/dev/null 2>&1
-import flask, requests
+import flask, requests, websocket
 print('ok')
 PY
 then
-  echo "[ERROR] 缺少 adapter 依赖（flask/requests）。"
+  echo "[ERROR] 缺少 adapter 依赖（flask/requests/websocket-client）。"
   echo "请执行：python3 -m pip install -r ${REQ_FILE}"
   exit 1
 fi

@@ -5,7 +5,7 @@
 - `grindr-profile-manager`：资料读取、预览、更新。
 - `grindr-session-auth`：会话状态、登录、刷新、保存。
 - `grindr-discovery-reader`：附近用户、看过我的、指定用户资料读取。
-- `grindr-chat-manager`：WebSocket IM 协议包校验与发送骨架。
+- `grindr-chat-manager`：WebSocket IM 协议包校验、长连接发送与通知缓冲读取。
 
 目标：
 - 所有 skill 均只走 localhost adapter，不直接请求上游。
@@ -88,11 +88,15 @@ adapters/grindr_adapter/
 - `POST /discovery/viewed-me/get`
 - `POST /discovery/user/get`
 
-## Chat Manager 路由（grindr-chat-manager，骨架阶段）
+## Chat Manager 路由（grindr-chat-manager，长连接）
 - `POST /chat/ws/config/get`
+- `POST /chat/ws/connection/status`
+- `POST /chat/ws/connection/connect`
+- `POST /chat/ws/connection/disconnect`
 - `POST /chat/ws/request/preview`
 - `POST /chat/ws/request/send`
 - `POST /chat/ws/notify/parse`
+- `POST /chat/ws/notify/pull`
 
 ## Shell 调用示例
 ### profile-manager
@@ -118,11 +122,15 @@ bash skills/grindr-discovery-reader/scripts/get_viewed_me.sh '{"limit":30}'
 bash skills/grindr-discovery-reader/scripts/get_user_profile.sh '{"profileId":827555450}'
 ```
 
-### chat-manager（骨架）
+### chat-manager（长连接）
 ```bash
 bash skills/grindr-chat-manager/scripts/get_ws_config.sh
+bash skills/grindr-chat-manager/scripts/ws_status.sh
+bash skills/grindr-chat-manager/scripts/ws_connect.sh true
 bash skills/grindr-chat-manager/scripts/preview_packet.sh '{"requestId":1,"type":"userList","data":[]}'
 bash skills/grindr-chat-manager/scripts/send_packet.sh '{"requestId":2,"type":"userConnect","data":[{"user":"110099028"}]}'
+bash skills/grindr-chat-manager/scripts/ws_pull_notify.sh 20 true
+bash skills/grindr-chat-manager/scripts/ws_disconnect.sh
 ```
 
 ## Preview 示例
