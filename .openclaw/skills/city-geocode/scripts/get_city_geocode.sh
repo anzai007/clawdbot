@@ -30,7 +30,8 @@ TMP_BODY="$(mktemp)"
 trap 'rm -f "$TMP_BODY"' EXIT
 
 # 使用 URL 编码的 q 参数调用 Nominatim，格式固定为 JSON。
-HTTP_STATUS="$(curl -sS -G "$API_URL" \
+# 关键兜底：网络层失败时也返回结构化 JSON，避免上层拿到空响应。
+if ! HTTP_STATUS="$(curl -sS -G "$API_URL" \
   --connect-timeout 5 \
   --max-time 20 \
   --data-urlencode "q=${CITY_QUERY}" \
@@ -38,7 +39,10 @@ HTTP_STATUS="$(curl -sS -G "$API_URL" \
   --data-urlencode "limit=1" \
   -H "User-Agent: openclaw-city-geocode-skill/1.0" \
   -o "$TMP_BODY" \
-  -w "%{http_code}")"
+  -w "%{http_code}")"; then
+  json_error "NETWORK_ERROR" "请求三方 API 失败（网络异常或超时）"
+  exit 1
+fi
 
 if [ "$HTTP_STATUS" -lt 200 ] || [ "$HTTP_STATUS" -ge 300 ]; then
   # 使用 Python 兼容 JSON/文本两类错误体，避免依赖 jq。

@@ -16,11 +16,13 @@ author: local
 
 ## 支持动作
 - 读取附近用户列表
+- 按城市名一步获取附近用户列表（自动完成“城市 -> 坐标 -> nearby”）
 - 读取看过我的列表
 - 读取指定用户资料（按 `profileId`）
 
 ## Nearby 输出收敛规则
 - `get_nearby_profiles.sh` 在本地自动执行 topN 裁剪，避免超大 JSON 进入对话。
+- `get_nearby_by_city.sh` 是默认快路径：传城市名即可一步完成查询，减少中间探测步骤。
 - topN 优先级：脚本第 2 参数 > 环境变量 `DISCOVERY_NEARBY_TOP_N` > payload 内 `limit` > 默认 `5`。
 - nearby 请求成功后应立即基于裁剪结果回复；后续调试必须在回复后再进行。
 
@@ -41,6 +43,7 @@ author: local
 # 在 .openclaw/workspace/grindr-traffic 目录执行
 bash skills/grindr-discovery-reader/scripts/get_nearby_profiles.sh '{"limit":30}'
 bash skills/grindr-discovery-reader/scripts/get_nearby_profiles.sh '{"lat":19.0549990,"lng":72.8692035,"limit":30}' 5
+bash skills/grindr-discovery-reader/scripts/get_nearby_by_city.sh "Hong Kong" 3
 bash skills/grindr-discovery-reader/scripts/get_viewed_me.sh '{"pageNumber":1}'
 bash skills/grindr-discovery-reader/scripts/get_user_profile.sh '{"profileId":827555450}'
 ```

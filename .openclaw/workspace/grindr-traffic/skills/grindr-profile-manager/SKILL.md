@@ -57,6 +57,7 @@ bash skills/grindr-profile-manager/scripts/update_profile_images.sh '{"primaryIm
 - mutation（`update_*`）前，必须先执行对应 `preview_*`。
 - `preview_*` 通过后，再执行正式更新。
 - 任意更新失败时，先停止重试并检查输入与 adapter 状态。
+- 单用户资料查询（`profileId`）应直接调用 `get_user_profile.sh` 一次完成，避免额外探测与二次脚本拼接。
 
 ## 安全规则
 - 禁止泄露 `.secrets/grindr.env` 中任何 secret。

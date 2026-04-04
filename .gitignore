@@ -30,6 +30,7 @@ __openclaw_vitest__/
 !.openclaw/workspace/meta-ads/TOOLS.md
 !.openclaw/workspace/grindr-traffic/
 !.openclaw/workspace/grindr-traffic/AGENTS.md
+!.openclaw/workspace/grindr-traffic/SOUL.md
 !.openclaw/workspace/grindr-traffic/.secrets/
 !.openclaw/workspace/grindr-traffic/.secrets/grindr.env.example
 !.openclaw/workspace/grindr-traffic/skills/
@@ -59,6 +60,7 @@ __openclaw_vitest__/
 !.openclaw/workspace/grindr-traffic/skills/grindr-discovery-reader/scripts/get_nearby_profiles.sh
 !.openclaw/workspace/grindr-traffic/skills/grindr-discovery-reader/scripts/get_viewed_me.sh
 !.openclaw/workspace/grindr-traffic/skills/grindr-discovery-reader/scripts/get_user_profile.sh
+!.openclaw/workspace/grindr-traffic/skills/grindr-discovery-reader/scripts/get_nearby_by_city.sh
 !.openclaw/workspace/grindr-traffic/adapters/
 !.openclaw/workspace/grindr-traffic/adapters/grindr_adapter/
 !.openclaw/workspace/grindr-traffic/adapters/grindr_adapter/app.py
