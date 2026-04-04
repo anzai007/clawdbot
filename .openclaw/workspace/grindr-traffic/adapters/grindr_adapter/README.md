@@ -5,6 +5,7 @@
 - `grindr-profile-manager`：资料读取、预览、更新。
 - `grindr-session-auth`：会话状态、登录、刷新、保存。
 - `grindr-discovery-reader`：附近用户、看过我的、指定用户资料读取。
+- `grindr-chat-manager`：WebSocket IM 协议包校验与发送骨架。
 
 目标：
 - 所有 skill 均只走 localhost adapter，不直接请求上游。
@@ -34,6 +35,8 @@ adapters/grindr_adapter/
 - discovery 上游 endpoint（可选）：
   - `GRINDR_DISCOVERY_NEARBY_ENDPOINT`（默认 `/v1/cascade`）
   - `GRINDR_DISCOVERY_VIEWED_ME_ENDPOINT`（默认 `/v7/views/list`）
+- chat-manager WS 基础地址（可选）：
+  - `GRINDR_IM_WS_BASE_URL`（默认 `wss://example.invalid/im`）
 - 401 自动补救（可选）：
   - `GRINDR_AUTO_LOGIN_EMAIL`
   - `GRINDR_AUTO_LOGIN_PASSWORD`
@@ -85,6 +88,12 @@ adapters/grindr_adapter/
 - `POST /discovery/viewed-me/get`
 - `POST /discovery/user/get`
 
+## Chat Manager 路由（grindr-chat-manager，骨架阶段）
+- `POST /chat/ws/config/get`
+- `POST /chat/ws/request/preview`
+- `POST /chat/ws/request/send`
+- `POST /chat/ws/notify/parse`
+
 ## Shell 调用示例
 ### profile-manager
 ```bash
@@ -107,6 +116,13 @@ bash skills/grindr-session-auth/scripts/save_session.sh '{"authToken":"replace_m
 bash skills/grindr-discovery-reader/scripts/get_nearby_profiles.sh '{"limit":30}'
 bash skills/grindr-discovery-reader/scripts/get_viewed_me.sh '{"limit":30}'
 bash skills/grindr-discovery-reader/scripts/get_user_profile.sh '{"profileId":827555450}'
+```
+
+### chat-manager（骨架）
+```bash
+bash skills/grindr-chat-manager/scripts/get_ws_config.sh
+bash skills/grindr-chat-manager/scripts/preview_packet.sh '{"requestId":1,"type":"userList","data":[]}'
+bash skills/grindr-chat-manager/scripts/send_packet.sh '{"requestId":2,"type":"userConnect","data":[{"user":"110099028"}]}'
 ```
 
 ## Preview 示例

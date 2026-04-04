@@ -32,6 +32,7 @@ class Settings:
     grindr_session_file: str
     grindr_discovery_nearby_endpoint: str
     grindr_discovery_viewed_me_endpoint: str
+    grindr_im_ws_base_url: str
     env_file: str
 
 
@@ -164,6 +165,11 @@ def load_settings() -> Settings:
         _optional_value(merged, "GRINDR_DISCOVERY_VIEWED_ME_ENDPOINT", default="/v7/views/list"),
         default="/v7/views/list",
     )
+    im_ws_base_url = _optional_value(
+        merged,
+        "GRINDR_IM_WS_BASE_URL",
+        default="wss://example.invalid/im",
+    ) or "wss://example.invalid/im"
 
     return Settings(
         grindr_base_url=base_url,
@@ -183,5 +189,6 @@ def load_settings() -> Settings:
         grindr_session_file=str(session_file_path),
         grindr_discovery_nearby_endpoint=nearby_endpoint,
         grindr_discovery_viewed_me_endpoint=viewed_me_endpoint,
+        grindr_im_ws_base_url=im_ws_base_url,
         env_file=str(env_path),
     )

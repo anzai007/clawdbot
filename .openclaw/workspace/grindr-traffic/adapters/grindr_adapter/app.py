@@ -15,6 +15,7 @@ from schemas import (
     ValidationError,
     build_preview_result,
     ensure_object,
+    validate_ws_packet_payload,
     validate_auth_login_password_payload,
     validate_auth_login_thirdparty_payload,
     validate_auth_refresh_session_payload,
@@ -24,6 +25,7 @@ from schemas import (
     validate_images_update_payload,
     validate_profile_id_payload,
     validate_update_payload,
+    ws_supported_types,
 )
 from session_store import (
     SessionStoreError,
@@ -55,6 +57,10 @@ ACTION_AUTH_SESSION_REFRESH_THIRDPARTY = "auth.session.refresh.thirdparty"
 ACTION_AUTH_SESSION_SAVE = "auth.session.save"
 ACTION_AUTH_AUTO_REFRESH = "auth.auto.refresh"
 ACTION_AUTH_AUTO_LOGIN_PASSWORD = "auth.auto.login.password"
+ACTION_CHAT_WS_CONFIG_GET = "chat.ws.config.get"
+ACTION_CHAT_WS_REQUEST_PREVIEW = "chat.ws.request.preview"
+ACTION_CHAT_WS_REQUEST_SEND = "chat.ws.request.send"
+ACTION_CHAT_WS_NOTIFY_PARSE = "chat.ws.notify.parse"
 
 _GEOHASH_BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz"
 
@@ -756,6 +762,81 @@ def create_app() -> Flask:
                 "sessionStatus": get_session_status(settings.grindr_session_file),
             },
             meta={"endpoint": "/auth/session/save"},
+        )
+        return jsonify(resp), HTTPStatus.OK
+
+    # ===== chat-manager（WebSocket 协议骨架） =====
+    @app.post("/chat/ws/config/get")
+    def chat_ws_config_get():
+        """返回 WS 配置与协议能力（骨架阶段）。"""
+
+        resp = build_success_response(
+            ACTION_CHAT_WS_CONFIG_GET,
+            data={
+                "wsBaseUrl": settings.grindr_im_ws_base_url,
+                "supportedTypes": ws_supported_types(),
+                "mode": "framework",
+            },
+            meta={"endpoint": "/chat/ws/config/get"},
+        )
+        return jsonify(resp), HTTPStatus.OK
+
+    @app.post("/chat/ws/request/preview")
+    def chat_ws_request_preview():
+        """校验客户端 -> 服务端的 WS 协议包（不做真实网络发送）。"""
+
+        raw = request.get_json(silent=True)
+        payload = ensure_object(raw, action=ACTION_CHAT_WS_REQUEST_PREVIEW)
+        checked = validate_ws_packet_payload(payload, allow_notify_types=False)
+
+        resp = build_success_response(
+            ACTION_CHAT_WS_REQUEST_PREVIEW,
+            data={
+                "valid": True,
+                "packet": checked,
+                "wsBaseUrl": settings.grindr_im_ws_base_url,
+            },
+            meta={"endpoint": "/chat/ws/request/preview"},
+        )
+        return jsonify(resp), HTTPStatus.OK
+
+    @app.post("/chat/ws/request/send")
+    def chat_ws_request_send():
+        """WS 请求发送占位路由。
+
+        说明：
+        - 当前阶段仅完成 skill 骨架与协议校验。
+        - 该路由返回“已校验未发送”，便于上层联调脚本先跑通。
+        """
+
+        raw = request.get_json(silent=True)
+        payload = ensure_object(raw, action=ACTION_CHAT_WS_REQUEST_SEND)
+        checked = validate_ws_packet_payload(payload, allow_notify_types=False)
+
+        resp = build_success_response(
+            ACTION_CHAT_WS_REQUEST_SEND,
+            data={
+                "executed": False,
+                "packet": checked,
+                "wsBaseUrl": settings.grindr_im_ws_base_url,
+                "message": "当前为 skill 骨架阶段：协议校验已完成，真实 WS 发送尚未启用",
+            },
+            meta={"endpoint": "/chat/ws/request/send"},
+        )
+        return jsonify(resp), HTTPStatus.OK
+
+    @app.post("/chat/ws/notify/parse")
+    def chat_ws_notify_parse():
+        """校验服务端 -> 客户端通知包结构（不做事件持久化）。"""
+
+        raw = request.get_json(silent=True)
+        payload = ensure_object(raw, action=ACTION_CHAT_WS_NOTIFY_PARSE)
+        checked = validate_ws_packet_payload(payload, allow_notify_types=True)
+
+        resp = build_success_response(
+            ACTION_CHAT_WS_NOTIFY_PARSE,
+            data={"valid": True, "packet": checked},
+            meta={"endpoint": "/chat/ws/notify/parse"},
         )
         return jsonify(resp), HTTPStatus.OK
 
