@@ -1,9 +1,14 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_DIR="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+ADAPTER_BASE_URL="$("${WORKSPACE_DIR}/scripts/resolve_grindr_adapter_base_url.sh")"
+
+
 # 读取看过我的列表：允许不传参数，默认空对象。
 ACTION="discovery.get_viewed_me"
-ENDPOINT="http://127.0.0.1:8787/discovery/viewed-me/get"
+ENDPOINT="${ADAPTER_BASE_URL}/discovery/viewed-me/get"
 PAYLOAD="${1:-{}}"
 
 if [[ -z "${PAYLOAD}" ]]; then

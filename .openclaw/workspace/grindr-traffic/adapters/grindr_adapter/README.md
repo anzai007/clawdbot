@@ -10,6 +10,7 @@
 - 所有 skill 均只走 localhost adapter，不直接请求上游。
 - 统一输入校验、统一 JSON 返回、统一错误结构。
 - 会话与 token 默认按脱敏策略对外返回。
+- `profile-manager` 与 `discovery-reader` 在上游 401 时支持自动补救（refresh → password login → 重试一次）。
 
 ## 目录结构
 ```text
@@ -33,6 +34,10 @@ adapters/grindr_adapter/
 - discovery 上游 endpoint（可选）：
   - `GRINDR_DISCOVERY_NEARBY_ENDPOINT`（默认 `/v1/cascade`）
   - `GRINDR_DISCOVERY_VIEWED_ME_ENDPOINT`（默认 `/v7/views/list`）
+- 401 自动补救（可选）：
+  - `GRINDR_AUTO_LOGIN_EMAIL`
+  - `GRINDR_AUTO_LOGIN_PASSWORD`
+  - `GRINDR_GEOHASH`（自动 refresh/login 时透传给 `/v8/sessions`）
 
 ## 完整启动步骤
 1. 进入工作区：
@@ -116,6 +121,7 @@ bash skills/grindr-session-auth/scripts/preview_login_password.sh '{"email":"use
 - `INVALID_JSON`：请求体不是合法 JSON 对象。
 - `MISSING_AUTH_TOKEN`：refresh 缺少可用 authToken。
 - `HTTP_4xx / HTTP_5xx`：上游返回错误，检查账号、设备参数、风控状态。
+- `HTTP_401`：会触发自动补救；若最终仍返回 401，检查 `session` 是否有效或补充自动登录账号密码。
 
 ## 联调顺序建议（session-auth）
 1. 启动 adapter：`bash scripts/start_grindr_adapter.sh`

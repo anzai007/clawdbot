@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import os
 from http import HTTPStatus
-from typing import Any
+from typing import Any, Callable
 
 from flask import Flask, jsonify, request
 
@@ -53,6 +53,53 @@ ACTION_AUTH_LOGIN_THIRDPARTY_PREVIEW = "auth.login.thirdparty.preview"
 ACTION_AUTH_SESSION_REFRESH = "auth.session.refresh"
 ACTION_AUTH_SESSION_REFRESH_THIRDPARTY = "auth.session.refresh.thirdparty"
 ACTION_AUTH_SESSION_SAVE = "auth.session.save"
+ACTION_AUTH_AUTO_REFRESH = "auth.auto.refresh"
+ACTION_AUTH_AUTO_LOGIN_PASSWORD = "auth.auto.login.password"
+
+_GEOHASH_BASE32 = "0123456789bcdefghjkmnpqrstuvwxyz"
+
+
+def _encode_geohash(lat: float, lng: float, precision: int = 12) -> str:
+    """把经纬度编码为 geohash。
+
+    说明：
+    - Postman 预处理脚本要求把 `lat/lng` 转成 `nearbyGeoHash`。
+    - 这里使用标准 geohash 编码，不依赖额外三方库。
+    """
+
+    lat_interval = [-90.0, 90.0]
+    lng_interval = [-180.0, 180.0]
+    is_even_bit = True
+    bit = 0
+    ch = 0
+    output: list[str] = []
+    bits = (16, 8, 4, 2, 1)
+
+    while len(output) < precision:
+        if is_even_bit:
+            mid = (lng_interval[0] + lng_interval[1]) / 2.0
+            if lng >= mid:
+                ch |= bits[bit]
+                lng_interval[0] = mid
+            else:
+                lng_interval[1] = mid
+        else:
+            mid = (lat_interval[0] + lat_interval[1]) / 2.0
+            if lat >= mid:
+                ch |= bits[bit]
+                lat_interval[0] = mid
+            else:
+                lat_interval[1] = mid
+
+        is_even_bit = not is_even_bit
+        if bit < 4:
+            bit += 1
+        else:
+            output.append(_GEOHASH_BASE32[ch])
+            bit = 0
+            ch = 0
+
+    return "".join(output)
 
 
 def _session_result_payload(
@@ -88,6 +135,41 @@ def _json_or_empty_object(raw: Any, *, action: str) -> dict[str, Any]:
     return ensure_object(raw, action=action)
 
 
+def _prepare_nearby_query(payload: dict[str, Any], fallback_geohash: str) -> dict[str, Any]:
+    """规范化附近列表查询参数。
+
+    优先级：
+    1. 直接传 `nearbyGeoHash`
+    2. 传 `lat + lng/lon`，自动编码为 `nearbyGeoHash`
+    3. 回退 `GRINDR_GEOHASH`
+    """
+
+    query = dict(payload)
+    nearby_hash = query.get("nearbyGeoHash")
+    if isinstance(nearby_hash, str) and nearby_hash.strip():
+        query["nearbyGeoHash"] = nearby_hash.strip()
+    else:
+        lat_raw = query.pop("lat", None)
+        lng_raw = query.pop("lng", query.pop("lon", None))
+        if lat_raw is not None and lng_raw is not None:
+            try:
+                lat = float(lat_raw)
+                lng = float(lng_raw)
+            except (TypeError, ValueError) as exc:
+                raise ValidationError("INVALID_LOCATION", "lat/lng 必须是数字", http_status=400) from exc
+            if not (-90.0 <= lat <= 90.0) or not (-180.0 <= lng <= 180.0):
+                raise ValidationError("INVALID_LOCATION", "lat/lng 超出有效范围", http_status=400)
+            query["nearbyGeoHash"] = _encode_geohash(lat, lng, precision=12)
+        elif fallback_geohash.strip():
+            query["nearbyGeoHash"] = fallback_geohash.strip()
+
+    # 上游按 Postman 约定仅消费 nearbyGeoHash，不携带 lat/lng。
+    query.pop("lat", None)
+    query.pop("lng", None)
+    query.pop("lon", None)
+    return query
+
+
 def create_app() -> Flask:
     """创建 Flask 应用并注册路由。"""
 
@@ -99,12 +181,150 @@ def create_app() -> Flask:
     app.config["JSON_AS_ASCII"] = False
     app.config["PROPAGATE_EXCEPTIONS"] = False
 
+    def _load_runtime_session() -> dict[str, Any]:
+        """读取本地会话；失败时返回空对象并记录告警。"""
+
+        try:
+            return load_session_raw(settings.grindr_session_file) or {}
+        except SessionStoreError:
+            # 会话文件异常时降级回退，避免读取类路由直接 500。
+            logger.warning("自动补救：session 文件读取失败，回退到环境 token")
+            return {}
+
+    def _resolve_runtime_auth_token() -> str | None:
+        """优先读取会话文件中的 authToken，回退到环境配置。"""
+
+        session = _load_runtime_session()
+        token = session.get("authToken")
+        if isinstance(token, str) and token.strip():
+            return token.strip()
+
+        fallback = settings.grindr_auth_token.strip()
+        return fallback or None
+
+    def _resolve_runtime_session_token() -> str | None:
+        """优先读取会话文件中的 sessionToken（对应 /v8/sessions 的 sessionId）。"""
+
+        session = _load_runtime_session()
+        token = session.get("sessionToken")
+        if isinstance(token, str) and token.strip():
+            return token.strip()
+
+        # 兼容旧配置：未落 sessionToken 时回退 env token。
+        fallback = settings.grindr_auth_token.strip()
+        return fallback or None
+
+    def _configured_geohash() -> str | None:
+        """读取可选 geohash；自动鉴权链路会透传给 /v8/sessions。"""
+
+        value = settings.grindr_geohash.strip()
+        return value or None
+
+    def _try_auto_refresh_session() -> bool:
+        """尝试自动刷新会话（401 兜底第一步）。"""
+
+        current_auth_token = _resolve_runtime_auth_token()
+        if not current_auth_token:
+            return False
+
+        refresh_payload: dict[str, Any] = {"authToken": current_auth_token}
+        local_session = _load_runtime_session()
+        email = local_session.get("email")
+        if isinstance(email, str) and email.strip():
+            refresh_payload["email"] = email.strip()
+        geohash = _configured_geohash()
+        if geohash:
+            refresh_payload["geohash"] = geohash
+
+        try:
+            result = client.post(
+                "/v8/sessions",
+                action=ACTION_AUTH_AUTO_REFRESH,
+                payload=refresh_payload,
+                use_auth=True,
+                auth_token=current_auth_token,
+            )
+        except UpstreamRequestError:
+            return False
+
+        _session_result_payload(
+            session_file=settings.grindr_session_file,
+            upstream_body=result["body"],
+            fallback_session={"authToken": current_auth_token, "email": refresh_payload.get("email")},
+            source="auto_refresh_401",
+        )
+        logger.info("401 自动补救：session refresh 成功")
+        return True
+
+    def _try_auto_login_password() -> bool:
+        """尝试自动密码登录（401 兜底第二步）。"""
+
+        email = settings.grindr_auto_login_email.strip()
+        password = settings.grindr_auto_login_password.strip()
+        if not email or not password:
+            return False
+        login_payload: dict[str, Any] = {"email": email, "password": password}
+        geohash = _configured_geohash()
+        if geohash:
+            login_payload["geohash"] = geohash
+
+        try:
+            result = client.post(
+                "/v8/sessions",
+                action=ACTION_AUTH_AUTO_LOGIN_PASSWORD,
+                payload=login_payload,
+                use_auth=False,
+            )
+        except UpstreamRequestError:
+            return False
+
+        _session_result_payload(
+            session_file=settings.grindr_session_file,
+            upstream_body=result["body"],
+            fallback_session={"email": email},
+            source="auto_login_password_401",
+        )
+        logger.info("401 自动补救：password login 成功")
+        return True
+
+    def _try_auto_reauth() -> bool:
+        """401 自动补救流程：先 refresh，再 password login。"""
+
+        # 业务规则：优先使用已有会话做 refresh，失败后才尝试密码登录。
+        if _try_auto_refresh_session():
+            return True
+        if _try_auto_login_password():
+            return True
+        return False
+
+    def _request_with_auto_reauth(action: str, fn: Callable[[], dict[str, Any]]) -> dict[str, Any]:
+        """封装 401 自动补救：失败后最多重试一次原请求。"""
+
+        try:
+            return fn()
+        except UpstreamRequestError as err:
+            if err.http_status != 401:
+                raise
+            if not _try_auto_reauth():
+                raise
+
+            logger.info("401 自动补救完成，重试动作：%s", action)
+            return fn()
+
     # ===== profile-manager 路由（保持兼容） =====
     @app.post("/profile/me/get")
     def profile_me_get():
         """获取当前账号资料。"""
 
-        result = client.get("/v4/me/profile", action=ACTION_ME_GET, use_auth=True)
+        result = _request_with_auto_reauth(
+            ACTION_ME_GET,
+            lambda: client.get(
+                "/v4/me/profile",
+                action=ACTION_ME_GET,
+                use_auth=True,
+                auth_token=_resolve_runtime_session_token(),
+            ),
+        )
         payload = build_success_response(
             ACTION_ME_GET,
             data=result["body"],
@@ -125,7 +345,15 @@ def create_app() -> Flask:
         profile_id = validate_profile_id_payload(payload)
 
         endpoint = f"/v7/profiles/{profile_id}"
-        result = client.get(endpoint, action=ACTION_USER_GET, use_auth=True)
+        result = _request_with_auto_reauth(
+            ACTION_USER_GET,
+            lambda: client.get(
+                endpoint,
+                action=ACTION_USER_GET,
+                use_auth=True,
+                auth_token=_resolve_runtime_session_token(),
+            ),
+        )
         resp = build_success_response(
             ACTION_USER_GET,
             data=result["body"],
@@ -145,7 +373,16 @@ def create_app() -> Flask:
         payload = ensure_object(raw, action=ACTION_ME_UPDATE)
         update_payload = validate_update_payload(payload)
 
-        result = client.put("/v3.1/me/profile", action=ACTION_ME_UPDATE, payload=update_payload, use_auth=True)
+        result = _request_with_auto_reauth(
+            ACTION_ME_UPDATE,
+            lambda: client.put(
+                "/v3.1/me/profile",
+                action=ACTION_ME_UPDATE,
+                payload=update_payload,
+                use_auth=True,
+                auth_token=_resolve_runtime_session_token(),
+            ),
+        )
         resp = build_success_response(
             ACTION_ME_UPDATE,
             data=result["body"],
@@ -165,11 +402,15 @@ def create_app() -> Flask:
         payload = ensure_object(raw, action=ACTION_ME_IMAGES_UPDATE)
         image_payload = validate_images_update_payload(payload)
 
-        result = client.put(
-            "/v3/me/profile/images",
-            action=ACTION_ME_IMAGES_UPDATE,
-            payload=image_payload,
-            use_auth=True,
+        result = _request_with_auto_reauth(
+            ACTION_ME_IMAGES_UPDATE,
+            lambda: client.put(
+                "/v3/me/profile/images",
+                action=ACTION_ME_IMAGES_UPDATE,
+                payload=image_payload,
+                use_auth=True,
+                auth_token=_resolve_runtime_session_token(),
+            ),
         )
         resp = build_success_response(
             ACTION_ME_IMAGES_UPDATE,
@@ -218,12 +459,17 @@ def create_app() -> Flask:
         raw = request.get_json(silent=True)
         payload = _json_or_empty_object(raw, action=ACTION_DISCOVERY_NEARBY_GET)
         checked = validate_discovery_list_payload(payload)
+        nearby_query = _prepare_nearby_query(checked, settings.grindr_geohash)
 
-        result = client.get_with_query(
-            settings.grindr_discovery_nearby_endpoint,
-            action=ACTION_DISCOVERY_NEARBY_GET,
-            query=checked,
-            use_auth=True,
+        result = _request_with_auto_reauth(
+            ACTION_DISCOVERY_NEARBY_GET,
+            lambda: client.get_with_query(
+                settings.grindr_discovery_nearby_endpoint,
+                action=ACTION_DISCOVERY_NEARBY_GET,
+                query=nearby_query,
+                use_auth=True,
+                auth_token=_resolve_runtime_session_token(),
+            ),
         )
         resp = build_success_response(
             ACTION_DISCOVERY_NEARBY_GET,
@@ -244,11 +490,15 @@ def create_app() -> Flask:
         payload = _json_or_empty_object(raw, action=ACTION_DISCOVERY_VIEWED_ME_GET)
         checked = validate_discovery_list_payload(payload)
 
-        result = client.get_with_query(
-            settings.grindr_discovery_viewed_me_endpoint,
-            action=ACTION_DISCOVERY_VIEWED_ME_GET,
-            query=checked,
-            use_auth=True,
+        result = _request_with_auto_reauth(
+            ACTION_DISCOVERY_VIEWED_ME_GET,
+            lambda: client.get_with_query(
+                settings.grindr_discovery_viewed_me_endpoint,
+                action=ACTION_DISCOVERY_VIEWED_ME_GET,
+                query=checked,
+                use_auth=True,
+                auth_token=_resolve_runtime_session_token(),
+            ),
         )
         resp = build_success_response(
             ACTION_DISCOVERY_VIEWED_ME_GET,
@@ -270,7 +520,15 @@ def create_app() -> Flask:
         profile_id = validate_profile_id_payload(payload)
 
         endpoint = f"/v7/profiles/{profile_id}"
-        result = client.get(endpoint, action=ACTION_DISCOVERY_USER_PROFILE_GET, use_auth=True)
+        result = _request_with_auto_reauth(
+            ACTION_DISCOVERY_USER_PROFILE_GET,
+            lambda: client.get(
+                endpoint,
+                action=ACTION_DISCOVERY_USER_PROFILE_GET,
+                use_auth=True,
+                auth_token=_resolve_runtime_session_token(),
+            ),
+        )
         resp = build_success_response(
             ACTION_DISCOVERY_USER_PROFILE_GET,
             data=result["body"],

@@ -1,7 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ADAPTER_URL="http://127.0.0.1:8787/profile/me/update/preview"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_DIR="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+ADAPTER_BASE_URL="$("${WORKSPACE_DIR}/scripts/resolve_grindr_adapter_base_url.sh")"
+
+
+ADAPTER_URL="${ADAPTER_BASE_URL}/profile/me/update/preview"
 PAYLOAD="${1:-}"
 
 if [[ -z "${PAYLOAD}" ]]; then

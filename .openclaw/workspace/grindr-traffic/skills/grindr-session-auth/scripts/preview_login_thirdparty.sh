@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_DIR="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+ADAPTER_BASE_URL="$("${WORKSPACE_DIR}/scripts/resolve_grindr_adapter_base_url.sh")"
+
+
 ACTION="session.preview_login_thirdparty"
-ENDPOINT="http://127.0.0.1:8787/auth/login/thirdparty/preview"
+ENDPOINT="${ADAPTER_BASE_URL}/auth/login/thirdparty/preview"
 PAYLOAD="${1:-}"
 
 if [[ -z "${PAYLOAD}" ]]; then

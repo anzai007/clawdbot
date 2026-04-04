@@ -1,8 +1,13 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+WORKSPACE_DIR="$(cd "${SCRIPT_DIR}/../../.." && pwd)"
+ADAPTER_BASE_URL="$("${WORKSPACE_DIR}/scripts/resolve_grindr_adapter_base_url.sh")"
+
+
 ACTION="session.get_session_status"
-ENDPOINT="http://127.0.0.1:8787/auth/session/status"
+ENDPOINT="${ADAPTER_BASE_URL}/auth/session/status"
 
 RESP="$(curl -sS -X POST "${ENDPOINT}" 2>/dev/null)" || {
   cat <<JSON

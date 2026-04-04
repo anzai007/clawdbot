@@ -23,6 +23,9 @@ class Settings:
     grindr_locale: str
     grindr_time_zone: str
     grindr_user_agent: str
+    grindr_auto_login_email: str
+    grindr_auto_login_password: str
+    grindr_geohash: str
     grindr_timeout_seconds: int
     grindr_retry_times: int
     grindr_log_dir: str
@@ -130,6 +133,9 @@ def load_settings() -> Settings:
     user_agent = _require_value(merged, "GRINDR_USER_AGENT")
     auth_scheme = _optional_value(merged, "GRINDR_AUTH_SCHEME", default="Bearer") or "Bearer"
     auth_token = _optional_value(merged, "GRINDR_AUTH_TOKEN", default="")
+    auto_login_email = _optional_value(merged, "GRINDR_AUTO_LOGIN_EMAIL", default="")
+    auto_login_password = _optional_value(merged, "GRINDR_AUTO_LOGIN_PASSWORD", default="")
+    geohash = _optional_value(merged, "GRINDR_GEOHASH", default="")
     # L-* 头兼容：未显式配置时回退到 device_id / 常用默认值。
     device_info = _optional_value(merged, "GRINDR_DEVICE_INFO", default=device_id) or device_id
     locale = _optional_value(merged, "GRINDR_LOCALE", default="zh_CN") or "zh_CN"
@@ -168,6 +174,9 @@ def load_settings() -> Settings:
         grindr_locale=locale,
         grindr_time_zone=time_zone,
         grindr_user_agent=user_agent,
+        grindr_auto_login_email=auto_login_email,
+        grindr_auto_login_password=auto_login_password,
+        grindr_geohash=geohash,
         grindr_timeout_seconds=timeout_seconds,
         grindr_retry_times=retry_times,
         grindr_log_dir=str(log_dir_path),
