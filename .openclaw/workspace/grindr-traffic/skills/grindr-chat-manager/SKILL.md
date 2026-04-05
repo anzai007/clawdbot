@@ -52,6 +52,9 @@ author: local
 # 通用协议包（示例：在线用户列表）
 '{"requestId":1,"source":"","type":"userList","data":[]}'
 
+# 简化发送参数（脚本会自动标准化为 messageSend 协议包）
+'{"senderProfileId":"840664577","targetProfileId":"842220045","message":"哈喽，好久没聊了～"}'
+
 # 发送文本消息（messageSend）
 '{"requestId":2,"source":"","type":"messageSend","data":[{"messageId":"fdab55ee-2e77-43ea-b443-67b99a9146d9","conversationId":"110099028-111470292","sender":"110099028","senderName":"euleina","senderAvatar":"","senderTime":"2025-12-18T10:32:51.035Z","target":"111470292","messageType":"text","messageContent":"hello","isRead":false,"isRecalled":false,"isDeleted":false}]}'
 ```
@@ -65,6 +68,7 @@ bash skills/grindr-chat-manager/scripts/ws_connect.sh true
 bash skills/grindr-chat-manager/scripts/ws_disconnect.sh
 bash skills/grindr-chat-manager/scripts/ws_pull_notify.sh 20 true
 bash skills/grindr-chat-manager/scripts/ws_send_and_pull.sh '{"requestId":1,"type":"userList","data":[]}' 20 true false
+bash skills/grindr-chat-manager/scripts/ws_send_and_pull.sh '{"senderProfileId":"840664577","targetProfileId":"842220045","message":"hello"}' 20 true false
 bash skills/grindr-chat-manager/scripts/preview_packet.sh '{"requestId":1,"type":"userList","data":[]}'
 bash skills/grindr-chat-manager/scripts/send_packet.sh '{"requestId":2,"type":"userConnect","data":[{"user":"110099028"}]}'
 

@@ -12,14 +12,14 @@
   "models": {
     "mode": "merge",
     "providers": {
-      "custom-api-fireworks-ai": {
-        "baseUrl": "https://api.fireworks.ai/inference/v1",
-        "apiKey": "fw_8ViBdVTLm9XHVpyqMPzZJg",
+      "custom-api-openrouter-ai": {
+        "baseUrl": "https://openrouter.ai/api/v1",
+        "apiKey": "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",
         "api": "openai-completions",
         "models": [
           {
-            "id": "accounts/fireworks/models/deepseek-v3p2",
-            "name": "accounts/fireworks/models/deepseek-v3p2 (Custom Provider)",
+            "id": "deepseek/deepseek-v3.2",
+            "name": "deepseek/deepseek-v3.2 (OpenRouter)",
             "reasoning": false,
             "input": [
               "text"
@@ -40,17 +40,17 @@
   "agents": {
     "defaults": {
       "model": {
-        "primary": "custom-api-fireworks-ai/accounts/fireworks/models/deepseek-v3p2"
+        "primary": "custom-api-openrouter-ai/deepseek/deepseek-v3.2"
       },
       "models": {
-        "custom-api-fireworks-ai/accounts/fireworks/models/deepseek-v3p2": {}
+        "custom-api-openrouter-ai/deepseek/deepseek-v3.2": {}
       },
       "workspace": "/home/node/.openclaw/workspace"
     },
     "list": [
       {
         "id": "main",
-        "model": "custom-api-fireworks-ai/accounts/fireworks/models/deepseek-v3p2"
+        "model": "custom-api-openrouter-ai/deepseek/deepseek-v3.2"
       },
       {
         "id": "ops-chief",
@@ -65,7 +65,8 @@
           "allowAgents": [
             "x-traffic"
           ]
-        }
+        },
+        "model": "custom-api-openrouter-ai/deepseek/deepseek-v3.2"
       },
       {
         "id": "x-traffic",
@@ -75,14 +76,15 @@
         "identity": {
           "name": "X平台流量运营",
           "emoji": "📈"
-        }
+        },
+        "model": "custom-api-openrouter-ai/deepseek/deepseek-v3.2"
       },
       {
         "id": "meta-ads",
         "name": "meta-ads",
         "workspace": "/home/node/.openclaw/workspace/meta-ads",
         "agentDir": "/home/node/.openclaw/agents/meta-ads/agent",
-        "model": "custom-api-fireworks-ai/accounts/fireworks/models/deepseek-v3p2",
+        "model": "custom-api-openrouter-ai/deepseek/deepseek-v3.2",
         "identity": {
           "name": "Meta广告投放负责人",
           "theme": "performance marketing specialist",
@@ -94,7 +96,7 @@
         "name": "grindr-traffic",
         "workspace": "/home/node/.openclaw/workspace/grindr-traffic",
         "agentDir": "/home/node/.openclaw/agents/grindr-traffic/agent",
-        "model": "custom-api-fireworks-ai/accounts/fireworks/models/deepseek-v3p2",
+        "model": "custom-api-openrouter-ai/deepseek/deepseek-v3.2",
         "identity": {
           "name": "Grindr流量运营",
           "emoji": "🔥"
