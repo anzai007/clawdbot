@@ -13,7 +13,7 @@ author: local
 ## 适用场景
 - 在 `grindr-traffic` 工作区内，对 IM 协议包做标准化构造与校验。
 - 对消息动作（连接、发送、已读、撤回、删除、媒体发送）进行统一入口管理。
-- 先通过 adapter 完成协议预校验，后续再接入真实 WS 长连发送。
+- 通过 adapter 完成协议预校验与真实 WS 长连发送。
 
 ## 当前阶段说明（长连接）
 - 已提供协议字段校验与结构化脚本入口。
@@ -64,6 +64,7 @@ bash skills/grindr-chat-manager/scripts/ws_status.sh
 bash skills/grindr-chat-manager/scripts/ws_connect.sh true
 bash skills/grindr-chat-manager/scripts/ws_disconnect.sh
 bash skills/grindr-chat-manager/scripts/ws_pull_notify.sh 20 true
+bash skills/grindr-chat-manager/scripts/ws_send_and_pull.sh '{"requestId":1,"type":"userList","data":[]}' 20 true false
 bash skills/grindr-chat-manager/scripts/preview_packet.sh '{"requestId":1,"type":"userList","data":[]}'
 bash skills/grindr-chat-manager/scripts/send_packet.sh '{"requestId":2,"type":"userConnect","data":[{"user":"110099028"}]}'
 
@@ -84,3 +85,17 @@ bash skills/grindr-chat-manager/scripts/send_media.sh 841060828 841066441 176863
 - 禁止在输出与日志中暴露 token、账号密码、设备标识等敏感信息。
 - 发送动作默认先走 `preview_packet.sh` 校验，再执行 `send_packet.sh`。
 - 若需要真实 WS 长连，请在 adapter 内扩展，不得在 skill 脚本侧绕过适配层。
+
+## 标准执行链（强制）
+- 所有“发送类”动作默认走 `ws_send_and_pull.sh`，固定链路：`ws_connect -> send_packet -> ws_pull_notify`。
+- 快捷脚本（如 `message_send_text.sh`、`user_connect.sh`）已经内置上述三段流程。
+- 只有在明确要求“仅发送不拉取通知”时，才允许直接调用 `send_packet.sh`。
+
+## Telegram 指令模板
+```text
+请调用 grindr-chat-manager 的 ws_send_and_pull，payload={"requestId":101,"source":"","type":"userList","data":[]}，pullLimit=20，clear=true，forceReconnect=false，返回完整JSON。
+```
+
+```text
+请调用 grindr-chat-manager 的 message_send_text，sender=110099028，target=111470292，text=hello，返回完整JSON（包含connect/send/pull三个步骤）。
+```

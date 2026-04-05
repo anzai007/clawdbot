@@ -22,4 +22,4 @@ print(json.dumps(packet, ensure_ascii=False))
 PY
 )"
 
-bash "${SCRIPT_DIR}/send_packet.sh" "${PAYLOAD}"
+bash "${SCRIPT_DIR}/ws_send_and_pull.sh" "${PAYLOAD}" "20" "true" "false"

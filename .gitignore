@@ -30,6 +30,7 @@ __openclaw_vitest__/
 !.openclaw/workspace/meta-ads/TOOLS.md
 !.openclaw/workspace/grindr-traffic/
 !.openclaw/workspace/grindr-traffic/AGENTS.md
+!.openclaw/workspace/grindr-traffic/TOOLS.md
 !.openclaw/workspace/grindr-traffic/SOUL.md
 !.openclaw/workspace/grindr-traffic/.secrets/
 !.openclaw/workspace/grindr-traffic/.secrets/grindr.env.example
@@ -81,6 +82,7 @@ __openclaw_vitest__/
 !.openclaw/workspace/grindr-traffic/skills/grindr-chat-manager/scripts/ws_status.sh
 !.openclaw/workspace/grindr-traffic/skills/grindr-chat-manager/scripts/ws_disconnect.sh
 !.openclaw/workspace/grindr-traffic/skills/grindr-chat-manager/scripts/ws_pull_notify.sh
+!.openclaw/workspace/grindr-traffic/skills/grindr-chat-manager/scripts/ws_send_and_pull.sh
 !.openclaw/workspace/grindr-traffic/adapters/
 !.openclaw/workspace/grindr-traffic/adapters/grindr_adapter/
 !.openclaw/workspace/grindr-traffic/adapters/grindr_adapter/app.py
